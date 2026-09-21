@@ -1,33 +1,39 @@
 /* Mother Ticker TUI stylesheet.
-   Colours are the terminal's ANSI palette so the Linux console (16 colours,
-   TERM=linux) and an SSH session look the same. */
+   One explicit palette so the console, an SSH session and a screenshot agree.
+   On the 16-colour Linux console each value snaps to the nearest ANSI colour.
+
+   background  #0b0e14   panel border  #2f3a4a   dim text  #8b95a5
+   accent      #4fd1e3   title bar     #1e3a5f   ok        #22c55e
+   warning     #f5a623   critical      #e5383b   critical text #ff6b6b */
 
 Screen {
     layout: vertical;
+    background: #0b0e14;
+    color: #e6edf3;
 }
 
 #banner {
     height: 3;
     content-align: center middle;
     text-style: bold;
-    background: ansi_green;
-    color: ansi_black;
+    background: #22c55e;
+    color: #04160c;
 }
 #banner.warning {
-    background: ansi_yellow;
-    color: ansi_black;
+    background: #f5a623;
+    color: #1a1000;
 }
 #banner.critical {
-    background: ansi_red;
-    color: ansi_white;
+    background: #e5383b;
+    color: #ffffff;
 }
 #banner.critical.flash {
-    background: ansi_white;
-    color: ansi_red;
+    background: #ffffff;
+    color: #e5383b;
 }
 #banner.warning.flash {
-    background: ansi_black;
-    color: ansi_yellow;
+    background: #1a1000;
+    color: #f5a623;
 }
 
 #clock {
@@ -36,12 +42,12 @@ Screen {
     content-align: center middle;
     text-align: center;
     margin-top: 1;
-    color: ansi_bright_cyan;
+    color: #4fd1e3;
 }
 #clock-sub {
     width: 100%;
     text-align: center;
-    color: ansi_bright_black;
+    color: #8b95a5;
 }
 
 #panels {
@@ -52,14 +58,14 @@ Screen {
 }
 .panel {
     height: 1fr;
-    border: solid ansi_bright_black;
+    border: solid #2f3a4a;
     padding: 0 0 0 1;
 }
 .panel-icon {
     width: 17;
     height: 1fr;
     content-align: left middle;
-    color: ansi_bright_cyan;
+    color: #4fd1e3;
 }
 .panel-text {
     width: 1fr;
@@ -68,51 +74,24 @@ Screen {
     padding-left: 1;
 }
 .panel.warning {
-    border: solid ansi_yellow;
+    border: solid #f5a623;
 }
 .panel.warning .panel-icon {
-    color: ansi_yellow;
+    color: #f5a623;
 }
 .panel.critical {
-    border: solid ansi_red;
-    color: ansi_red;
+    border: solid #e5383b;
+    color: #ff6b6b;
     text-style: bold;
 }
 .panel.critical .panel-icon {
-    color: ansi_red;
-}
-
-#about-title {
-    width: 100%;
-    height: 4;
-    text-align: center;
-    margin-top: 1;
-    color: ansi_bright_cyan;
-    text-style: bold;
-}
-#about-tagline {
-    width: 100%;
-    text-align: center;
-    color: ansi_bright_black;
-}
-#about-body {
-    height: 1fr;
-    padding: 1 2;
-}
-#about-logo {
-    width: 50;
-    height: 15;
-    color: ansi_bright_cyan;
-}
-#about-text {
-    width: 1fr;
-    padding: 1 0 0 2;
+    color: #ff6b6b;
 }
 
 #dash-footer {
     dock: bottom;
     height: 1;
-    color: ansi_bright_black;
+    color: #8b95a5;
     padding: 0 1;
 }
 #footer-left {
@@ -127,13 +106,13 @@ Screen {
     height: 1;
     text-style: bold;
     padding: 0 1;
-    background: ansi_blue;
-    color: ansi_white;
+    background: #1e3a5f;
+    color: #e6f1ff;
 }
 .hint {
     dock: bottom;
     height: 1;
-    color: ansi_bright_black;
+    color: #8b95a5;
     padding: 0 1;
 }
 .pre {
@@ -148,6 +127,16 @@ OptionList {
     margin: 1 2;
     height: auto;
     max-height: 100%;
+    background: #0b0e14;
+    border: solid #2f3a4a;
+}
+OptionList:focus {
+    border: solid #4fd1e3;
+}
+OptionList > .option-list--option-highlighted {
+    background: #1e3a5f;
+    color: #e6f1ff;
+    text-style: bold;
 }
 #menu-body {
     height: 1fr;
@@ -156,8 +145,8 @@ OptionList {
 }
 #menu-logo {
     width: 50;
-    height: 15;
-    color: ansi_bright_cyan;
+    height: 16;
+    color: #4fd1e3;
 }
 #menu-column {
     width: 1fr;
@@ -166,18 +155,57 @@ OptionList {
 #menu-heading {
     padding: 0 2;
     text-style: bold;
-    color: ansi_bright_cyan;
+    color: #4fd1e3;
 }
 #menu {
     margin: 0 2;
 }
+
 DataTable {
     margin: 0 1;
     height: 1fr;
+    background: #0b0e14;
+}
+DataTable > .datatable--header {
+    background: #1e3a5f;
+    color: #e6f1ff;
+    text-style: bold;
+}
+DataTable > .datatable--cursor {
+    background: #2f3a4a;
+    color: #e6edf3;
 }
 Log {
     margin: 0 1;
     height: 1fr;
+    background: #0b0e14;
+}
+
+#about-title {
+    width: 100%;
+    height: 4;
+    text-align: center;
+    margin-top: 1;
+    color: #4fd1e3;
+    text-style: bold;
+}
+#about-tagline {
+    width: 100%;
+    text-align: center;
+    color: #8b95a5;
+}
+#about-body {
+    height: 1fr;
+    padding: 1 2;
+}
+#about-logo {
+    width: 50;
+    height: 16;
+    color: #4fd1e3;
+}
+#about-text {
+    width: 1fr;
+    padding: 1 0 0 2;
 }
 
 ConfirmScreen {
@@ -186,7 +214,8 @@ ConfirmScreen {
 #confirm-box {
     width: 60;
     height: auto;
-    border: thick ansi_red;
+    border: thick #e5383b;
+    background: #0b0e14;
     padding: 1 2;
 }
 #confirm-box Label {

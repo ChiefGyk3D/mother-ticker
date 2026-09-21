@@ -18,16 +18,69 @@ them the SVGs are written and the PNG step is skipped with a warning.
 from __future__ import annotations
 
 import asyncio
+import io
 import os
 import sys
 from pathlib import Path
 
+from rich.console import Console
 from textual.widgets import OptionList
 
 from mother_ticker.config import Config, TuiConfig
 from mother_ticker.tui.demo import DemoApp, DemoState
 
 SIZE = (100, 30)
+
+# Rich's default template wraps the terminal in a macOS-style window with a
+# title bar and fetches Fira Code from a CDN. This one is the terminal alone,
+# on the app's own background, in whatever monospace the viewer has.
+SVG_TEMPLATE = """\
+<svg class="rich-terminal" viewBox="0 0 {terminal_width} {terminal_height}" xmlns="http://www.w3.org/2000/svg">
+    <style>
+    .{unique_id}-matrix {{
+        font-family: "DejaVu Sans Mono", Menlo, Consolas, "Liberation Mono", monospace;
+        font-size: {char_height}px;
+        line-height: {line_height}px;
+        font-variant-east-asian: full-width;
+    }}
+    {styles}
+    </style>
+    <defs>
+    <clipPath id="{unique_id}-clip-terminal">
+      <rect x="0" y="0" width="{terminal_width}" height="{terminal_height}" />
+    </clipPath>
+    {lines}
+    </defs>
+    <rect fill="#0b0e14" x="0" y="0" width="{terminal_width}" height="{terminal_height}" />
+    <g clip-path="url(#{unique_id}-clip-terminal)">
+    {backgrounds}
+    <g class="{unique_id}-matrix">
+    {matrix}
+    </g>
+    </g>
+</svg>
+"""
+
+
+def export_svg(app: DemoApp) -> str:
+    """Textual's export_screenshot with our template instead of Rich's default."""
+    width, height = app.size
+    console = Console(
+        width=width,
+        height=height,
+        file=io.StringIO(),
+        force_terminal=True,
+        color_system="truecolor",
+        record=True,
+        legacy_windows=False,
+        safe_box=False,
+    )
+    console.print(
+        app.screen._compositor.render_update(full=True, screen_stack=app._background_screens)
+    )
+    return console.export_svg(title="", code_format=SVG_TEMPLATE)
+
+
 CONFIG = Config(tui=TuiConfig(refresh_s=0.2, network_refresh_s=60.0))
 
 # name -> (demo state, menu option id or None for the dashboard)
@@ -64,7 +117,7 @@ async def render_one(name: str, state: DemoState, target: str | None, out_dir: P
             app.screen.query_one("#banner").remove_class("flash")
             await pilot.pause(0.1)
         path = out_dir / f"{name}.svg"
-        app.save_screenshot(filename=path.name, path=str(out_dir), time_format="")
+        path.write_text(export_svg(app), encoding="utf-8")
         return path
 
 
