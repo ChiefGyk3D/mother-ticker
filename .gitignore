@@ -1,0 +1,24 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+/build/
+/dist/
+/.venv/
+/venv/
+/.mypy_cache/
+/.ruff_cache/
+/.pytest_cache/
+
+# Real site values never enter the public repository
+/ansible/inventory/local/
+/ansible/*.retry
+
+# Offline staging output
+/offline-bundle/
+/wheelhouse/
+
+# Editors
+*.swp
+.idea/
+.vscode/

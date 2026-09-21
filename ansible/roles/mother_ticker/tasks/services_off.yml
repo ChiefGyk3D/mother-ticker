@@ -1,0 +1,28 @@
+---
+# No module lists socket and timer unit files.
+- name: List unit files present on the host  # noqa: command-instead-of-module
+  ansible.builtin.command: systemctl list-unit-files --no-legend --plain
+  register: mother_ticker_unit_files
+  changed_when: false
+
+- name: Disable and mask services this role does not need
+  ansible.builtin.systemd:
+    name: "{{ item }}"
+    enabled: false
+    state: stopped
+    masked: true
+  loop: "{{ mother_ticker_services_disable }}"
+  when: item in (mother_ticker_unit_files.stdout_lines | map('split') | map('first') | list)
+
+- name: Stop unattended apt activity on the isolated unit
+  ansible.builtin.systemd:
+    name: "{{ item }}"
+    enabled: false
+    state: stopped
+    masked: true
+  loop:
+    - apt-daily.timer
+    - apt-daily-upgrade.timer
+  when:
+    - mother_ticker_site == 'malware-net'
+    - item in (mother_ticker_unit_files.stdout_lines | map('split') | map('first') | list)

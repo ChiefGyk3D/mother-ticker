@@ -1,0 +1,58 @@
+# Managed by Ansible (mother-ticker). Local edits are overwritten.
+# Site: {{ mother_ticker_site }}
+
+# GNSS time via gpsd's shared memory. It is only there to number the PPS
+# seconds (`lock NMEA` below); `noselect` keeps its jitter out of the clock.
+refclock SHM 0 refid NMEA precision 1e-3 offset {{ mother_ticker_nmea_offset }} delay {{ mother_ticker_nmea_delay }} noselect
+
+# Kernel PPS from the HAT. This is the stratum-0 reference.
+refclock PPS /dev/{{ mother_ticker_pps_device }} refid PPS lock NMEA precision 1e-7 prefer
+
+{% if mother_ticker_upstream_ntp | length > 0 %}
+# Fallback and sanity check only. PPS wins whenever it is healthy.
+{% for server in mother_ticker_upstream_ntp %}
+server {{ server }} iburst
+{% endfor %}
+{% endif %}
+{% if mother_ticker_orphan_stratum | int > 0 %}
+# No other time on this segment: keep serving from the free-running clock
+# if GPS is lost for a long time, at a stratum that says so.
+local stratum {{ mother_ticker_orphan_stratum }} orphan distance 0.1
+{% endif %}
+
+driftfile /var/lib/chrony/chrony.drift
+ntsdumpdir /var/lib/chrony
+{% if mother_ticker_chrony_log %}
+logdir /var/log/chrony
+log tracking statistics
+{% endif %}
+
+# Write the disciplined clock to the RV-3028 RTC every 11 minutes.
+rtcsync
+# Step only in the first three updates (boot from RTC to GPS); slew after that.
+makestep 1 3
+maxupdateskew 100.0
+leapsectz right/UTC
+
+# Who may ask for time.
+{% for net in mother_ticker_ntp_allow %}
+allow {{ net }}
+{% endfor %}
+{% if mother_ticker_ratelimit %}
+ratelimit interval 1 burst 16 leak 2
+{% endif %}
+
+# The command port stays on loopback so the unprivileged TUI can run chronyc
+# monitoring commands. Reconfiguration needs the Unix socket and root.
+# (`cmdport 0` would also block the TUI; loopback binding is the guard.)
+bindcmdaddress 127.0.0.1
+bindcmdaddress ::1
+cmdallow 127.0.0.1
+cmdallow ::1
+
+{% if mother_ticker_nts_enabled %}
+# Network Time Security for clients that support it (chrony, ntpsec).
+ntsservercert {{ mother_ticker_nts_cert }}
+ntsserverkey {{ mother_ticker_nts_key }}
+ntsport {{ mother_ticker_nts_port }}
+{% endif %}

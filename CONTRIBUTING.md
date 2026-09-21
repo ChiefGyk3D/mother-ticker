@@ -1,0 +1,153 @@
+# Contributing
+
+Thanks for looking. This is an appliance project: changes are expected to be
+small, tested, and documented in the same pull request.
+
+## Development setup
+
+```sh
+git clone https://github.com/ChiefGyk3D/mother-ticker
+cd mother-ticker
+make venv          # .venv with the package, ruff, mypy, pytest, bandit, yamllint, ansible-lint
+make check         # everything CI runs, minus the Python version matrix
+```
+
+`make check` runs ruff (lint and format), mypy in strict mode, pytest, bandit,
+yamllint, ansible-lint with the production profile, shellcheck, and the
+repository hygiene tests. Fix what it reports before opening a PR; CI runs the
+same tools and will say the same thing.
+
+You can run the TUI on any Linux machine without the hardware:
+
+```sh
+.venv/bin/mother-ticker tui            # gpsd and chronyd absent: every panel shows the fault
+.venv/bin/mother-ticker status
+.venv/bin/mother-ticker metrics
+```
+
+## Conventions
+
+- **No em dashes.** Anywhere: code, comments, docs, commit messages, TUI text.
+  `tests/test_repo_hygiene.py` fails on one. Use a comma, a colon, a
+  parenthesis or a new sentence.
+- **SPDX headers** on every Python and shell file:
+  `SPDX-License-Identifier: AGPL-3.0-or-later` and the Renegade Penguin LLC
+  copyright line. The hygiene test checks.
+- **Type hints everywhere, `mypy --strict` clean.** No `Any` without a
+  comment saying why.
+- **`ruff format`** is enforced. Data tables that the formatter would reflow
+  can be fenced with `# fmt: off` and a comment saying why.
+- **Collectors are the only code that touches the system.** They return
+  frozen dataclasses. Parsers are pure functions over text or JSON so they
+  can be tested from fixtures. If you add a data source, add a fixture
+  recorded from the real thing and a parser test.
+- **One evaluation.** `health.evaluate` decides what is wrong. Do not add a
+  second opinion in the TUI or the exporter; add a rule there and every
+  consumer gets it.
+- **Privileged actions** go through `sudo -n` with a fixed argument list and a
+  matching sudoers line in the role. Never build a command from user input.
+- **Ansible:** fully qualified module names, a `name` on every task, `mode` on
+  every file, `changed_when` on every command, idempotent on re-run. Anything
+  that needs a reboot notifies `Reboot required`; the role reboots once. A
+  check that can fail must fail with a message naming what to look at.
+- **Fail loudly.** A missing device, a missing tool, a service that is not
+  active: assert and name the fix. Never `ignore_errors` a real check.
+- Comments say *why*, especially where an obvious alternative is wrong
+  (`cmdport 0`, socket activation, `dpkg -i`).
+
+## Tests
+
+- `tests/` is hermetic: no network beyond loopback (the conftest blocks it),
+  no real gpsd, chronyd or sysfs. Fake daemons on loopback are fine.
+- Every bug fix gets a regression test whose docstring states the failure it
+  prevents.
+- The TUI is tested with Textual's pilot in a headless terminal. **Any change
+  that alters what the TUI looks like regenerates the screenshots in the same
+  pull request**: `make screenshots` renders `docs/images/*.svg` from the demo
+  data and rasterises them to PNG with Chromium (`pip install playwright &&
+  playwright install chromium` once), and the hygiene test checks that every
+  generated screenshot is in the README. Then look at the PNGs. Tests pass on things that are visibly wrong; the
+  first cut of the big clock passed every test and was torn in half by
+  centre alignment until somebody rasterised the SVG and looked.
+- `mother-ticker tui --demo [warning|critical]` runs the TUI with fabricated
+  data on your own machine.
+- A check must be falsifiable: break the thing it watches and confirm it goes
+  red with a useful message before trusting it.
+
+## Testing on hardware
+
+The CI never sees a Pi. Before a release, and for any change to the role, the
+GNSS script, chrony.conf or the boot configuration, run it on a real unit:
+
+1. Deploy to a bench unit, from the unit (`sudo scripts/install.sh --config
+   install.conf`) or from a controller (`ansible-playbook site.yml -l <unit>`).
+   Both drive the same role; test the path you changed.
+2. Confirm the verify step passes and the TUI reaches `ALL SYSTEMS NOMINAL`.
+3. `chronyc sources -v` shows `#* PPS`; `ppstest /dev/pps0` shows pulses;
+   `hwclock -r` agrees with `date`.
+4. Reboot and confirm it all comes back without help.
+5. For the isolated profile, also confirm the overlay: `mother-ticker-maint
+   status`, then that a file created in `/etc` is gone after a reboot.
+
+Say in the PR what you ran and on what OS image.
+
+## Pull requests
+
+- One logical change per PR. Small is good.
+- Update `CHANGELOG.md` under *Unreleased* (Keep a Changelog headings: Added,
+  Changed, Fixed, Removed, Security).
+- Update the docs that describe what you changed: README for anything an
+  operator sees, RUNBOOK for a new failure mode, ARCHITECTURE for a design
+  change.
+- CI must be green. The `all green` job is what branch protection watches;
+  a new job must be added to its `needs` list or the hygiene test fails.
+- Commit messages: imperative subject under 72 characters, a body that says
+  why.
+
+## Licensing and copyright
+
+One licence for the whole tree: AGPL-3.0-or-later. Every Python and shell
+file carries an SPDX header, and the hygiene test fails the build when one is
+missing.
+
+### You keep your copyright
+
+**There is no CLA and no copyright assignment.** We are not asking for either.
+
+- **You retain copyright on your own contributions**, licensed under
+  AGPL-3.0-or-later by the act of contributing.
+- Contributions made by Renegade Penguin LLC are the LLC's.
+- Everything else stays with whoever wrote it.
+
+This is the ordinary arrangement for a copyleft project, and it is written
+down because people reasonably assume otherwise when a company name appears
+in the copyright headers. The LLC is named there because a legal person can
+enforce the licence and a handle cannot, not because it is collecting rights
+from contributors.
+
+### Attribution
+
+Handles are fine everywhere attribution appears: commit authorship,
+`Co-Authored-By`, the CHANGELOG, a bench report. The copyright holder line is
+a separate thing from attribution, and neither replaces the other.
+
+## Releases
+
+Semantic Versioning. `src/mother_ticker/version.py` is the single source of
+truth for the version and for the lifecycle label (`__status__`: alpha until
+a unit has run on real hardware, beta until the runbook's states have each
+been seen on the bench, empty at 1.0); the README badges and the CHANGELOG
+heading must agree, and the hygiene test checks the version does.
+
+```sh
+scripts/release.sh 0.2.0     # bumps version.py and the badge, rolls Unreleased, commits, tags
+git push origin main v0.2.0  # the release workflow verifies and publishes
+```
+
+The release workflow refuses a tag whose version does not match `version.py`
+or has no CHANGELOG section, builds the sdist and wheel, and creates the
+GitHub release with the CHANGELOG section as its notes.
+
+Action pins in the workflows are commit SHAs with the version in a comment.
+Resolve a new pin with `git ls-remote --tags https://github.com/<owner>/<repo>`;
+never from memory.

@@ -1,0 +1,26 @@
+---
+- name: Enable the hardware watchdog through systemd
+  ansible.builtin.copy:
+    dest: /etc/systemd/system.conf.d/10-mother-ticker-watchdog.conf
+    content: |
+      # Managed by Ansible (mother-ticker). The BCM2711 watchdog reboots the
+      # unit if PID 1 stops petting it (a hung kernel or a wedged systemd).
+      [Manager]
+      RuntimeWatchdogSec={{ mother_ticker_watchdog_runtime_s }}s
+      RebootWatchdogSec=2min
+    mode: "0644"
+  notify: Reexec systemd
+  when: mother_ticker_hw_watchdog | bool
+
+- name: Bound the journal on a 1 GB box
+  ansible.builtin.copy:
+    dest: /etc/systemd/journald.conf.d/10-mother-ticker.conf
+    content: |
+      # Managed by Ansible (mother-ticker).
+      [Journal]
+      Storage={{ 'volatile' if mother_ticker_overlay | bool else 'persistent' }}
+      RuntimeMaxUse=48M
+      SystemMaxUse=200M
+      Compress=yes
+    mode: "0644"
+  notify: Restart journald

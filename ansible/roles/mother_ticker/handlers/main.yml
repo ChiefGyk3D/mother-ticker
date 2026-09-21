@@ -1,0 +1,65 @@
+---
+- name: Reload systemd
+  ansible.builtin.systemd:
+    daemon_reload: true
+
+- name: Reexec systemd
+  ansible.builtin.systemd:
+    daemon_reexec: true
+
+- name: Restart chrony
+  ansible.builtin.systemd:
+    name: chrony
+    state: restarted
+
+- name: Restart gpsd
+  ansible.builtin.systemd:
+    name: gpsd
+    state: restarted
+
+- name: Reload nftables
+  ansible.builtin.systemd:
+    name: nftables
+    state: reloaded
+
+- name: Restart sshd
+  ansible.builtin.systemd:
+    name: ssh
+    state: restarted
+
+- name: Restart fail2ban
+  ansible.builtin.systemd:
+    name: fail2ban
+    state: restarted
+
+- name: Restart journald
+  ansible.builtin.systemd:
+    name: systemd-journald
+    state: restarted
+
+- name: Restart mother-ticker services
+  ansible.builtin.systemd:
+    name: "{{ item }}"
+    state: restarted
+  loop:
+    - mother-ticker-console.service
+    - mother-ticker-exporter.service
+  when: item != 'mother-ticker-console.service' or mother_ticker_console_tui | bool
+  failed_when: false
+
+- name: Reload udev
+  ansible.builtin.command: udevadm control --reload
+  changed_when: true
+
+- name: Setup console
+  ansible.builtin.command: setupcon --save-only
+  changed_when: true
+
+- name: Reboot required
+  ansible.builtin.set_fact:
+    mother_ticker_reboot_required: true
+
+- name: Reboot host
+  ansible.builtin.reboot:
+    msg: "Mother Ticker provisioning: rebooting to apply boot configuration"
+    reboot_timeout: 300

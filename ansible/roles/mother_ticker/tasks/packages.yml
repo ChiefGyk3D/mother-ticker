@@ -1,0 +1,45 @@
+---
+- name: Install required packages
+  ansible.builtin.apt:
+    name: "{{ mother_ticker_packages }}"
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+  when: not mother_ticker_offline | bool
+
+- name: Install fail2ban
+  ansible.builtin.apt:
+    name: fail2ban
+    state: present
+  when:
+    - not mother_ticker_offline | bool
+    - mother_ticker_fail2ban | bool
+
+- name: Install packages whose name differs between Debian releases
+  ansible.builtin.apt:
+    name: "{{ item }}"
+    state: present
+  loop: "{{ mother_ticker_packages_optional }}"
+  register: mother_ticker_optional_install
+  failed_when: false
+  when: not mother_ticker_offline | bool
+
+- name: Remove packages that fight the role
+  ansible.builtin.apt:
+    name: "{{ mother_ticker_packages_remove }}"
+    state: absent
+    purge: true
+  when: not mother_ticker_offline | bool
+
+- name: Find ubxtool
+  ansible.builtin.command: which ubxtool
+  register: mother_ticker_ubxtool
+  changed_when: false
+  failed_when: false
+
+- name: Require ubxtool
+  ansible.builtin.assert:
+    that: mother_ticker_ubxtool.rc == 0
+    fail_msg: >-
+      ubxtool is not installed. It ships in gpsd-clients on bookworm and gpsd-tools on trixie;
+      neither installed. Install one by hand and re-run.

@@ -1,0 +1,65 @@
+#!/usr/sbin/nft -f
+# Managed by Ansible (mother-ticker). Local edits are overwritten.
+# Default deny inbound. NTP from the client subnets, SSH from management,
+# metrics from the scrapers, nothing else.
+{% set ntp4 = mother_ticker_ntp_allow | reject('search', ':') | list %}
+{% set ntp6 = mother_ticker_ntp_allow | select('search', ':') | list %}
+{% set mgmt4 = mother_ticker_mgmt_allow | reject('search', ':') | list %}
+{% set mgmt6 = mother_ticker_mgmt_allow | select('search', ':') | list %}
+{% set scrape4 = mother_ticker_metrics_allow | reject('search', ':') | list %}
+{% set scrape6 = mother_ticker_metrics_allow | select('search', ':') | list %}
+{% set metrics_on = mother_ticker_metrics_mode == 'prometheus' and mother_ticker_metrics_allow | length > 0 %}
+
+flush ruleset
+
+table inet mother_ticker {
+    chain input {
+        type filter hook input priority filter; policy drop;
+
+        ct state invalid drop
+        ct state established,related accept
+        iif "lo" accept
+
+        # Enough ICMP to be a good neighbour, rate limited.
+        ip protocol icmp icmp type { echo-request, destination-unreachable, time-exceeded, parameter-problem } limit rate 10/second accept
+        ip6 nexthdr icmpv6 icmpv6 type { echo-request, destination-unreachable, packet-too-big, time-exceeded, parameter-problem, nd-neighbor-solicit, nd-neighbor-advert, nd-router-advert } limit rate 20/second accept
+
+{% if ntp4 %}
+        ip saddr { {{ ntp4 | join(', ') }} } udp dport 123 accept
+{% endif %}
+{% if ntp6 %}
+        ip6 saddr { {{ ntp6 | join(', ') }} } udp dport 123 accept
+{% endif %}
+{% if mother_ticker_nts_enabled %}
+{% if ntp4 %}
+        ip saddr { {{ ntp4 | join(', ') }} } tcp dport {{ mother_ticker_nts_port }} accept
+{% endif %}
+{% if ntp6 %}
+        ip6 saddr { {{ ntp6 | join(', ') }} } tcp dport {{ mother_ticker_nts_port }} accept
+{% endif %}
+{% endif %}
+{% if mgmt4 %}
+        ip saddr { {{ mgmt4 | join(', ') }} } tcp dport 22 accept
+{% endif %}
+{% if mgmt6 %}
+        ip6 saddr { {{ mgmt6 | join(', ') }} } tcp dport 22 accept
+{% endif %}
+{% if metrics_on and scrape4 %}
+        ip saddr { {{ scrape4 | join(', ') }} } tcp dport {{ mother_ticker_metrics_port }} accept
+{% endif %}
+{% if metrics_on and scrape6 %}
+        ip6 saddr { {{ scrape6 | join(', ') }} } tcp dport {{ mother_ticker_metrics_port }} accept
+{% endif %}
+
+        limit rate 5/minute log prefix "mother-ticker drop: " counter
+        counter drop
+    }
+
+    chain forward {
+        type filter hook forward priority filter; policy drop;
+    }
+
+    chain output {
+        type filter hook output priority filter; policy accept;
+    }
+}

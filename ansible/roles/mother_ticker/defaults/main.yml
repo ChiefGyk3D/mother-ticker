@@ -1,0 +1,121 @@
+---
+# Every tunable of the role. Per-site values are overridden in host_vars.
+
+# Which unit this is: main-lan or malware-net.
+mother_ticker_site: main-lan
+mother_ticker_hostname: "{{ inventory_hostname }}"
+
+# Accounts. The admin user must already exist (Raspberry Pi Imager creates it).
+# mother_ticker_admin_user: set in inventory, asserted at run time.
+mother_ticker_user: motherticker
+mother_ticker_user_home: /var/lib/mother-ticker
+mother_ticker_install_dir: /opt/mother-ticker
+
+# Networks (RFC 5737 placeholders; override per host).
+mother_ticker_ntp_allow: ["192.0.2.0/24"]
+mother_ticker_mgmt_allow: ["192.0.2.0/24"]
+mother_ticker_metrics_allow: []
+mother_ticker_metrics_port: 9101
+
+# chrony.
+mother_ticker_upstream_ntp: []
+mother_ticker_orphan_stratum: 0            # >0 adds `local stratum N orphan`
+mother_ticker_nmea_offset: 0.0             # seconds; measured per unit
+mother_ticker_nmea_delay: 0.2
+mother_ticker_pps_device: pps0
+mother_ticker_ratelimit: true
+mother_ticker_chrony_log: true             # tracking and statistics logs under /var/log/chrony
+
+# NTS (optional). Certificate and key are supplied by you; the role only
+# references them. See docs/nts.md.
+mother_ticker_nts_enabled: false
+mother_ticker_nts_cert: /etc/mother-ticker/nts/server.crt
+mother_ticker_nts_key: /etc/mother-ticker/nts/server.key
+mother_ticker_nts_port: 4460
+
+# Hardware: Uputronics GPS/RTC Expansion Board on a Pi 4.
+# Verify the PPS GPIO against the board's documentation before first deploy.
+mother_ticker_pps_gpio: 18
+mother_ticker_rtc_overlay: "i2c-rtc,rv3028"
+mother_ticker_gps_device: /dev/ttyAMA0
+mother_ticker_disable_bt: true             # frees the PL011 UART for the GPS
+mother_ticker_disable_wifi: true           # wired appliance; set false if you need Wi-Fi
+mother_ticker_hw_watchdog: true
+mother_ticker_watchdog_runtime_s: 15
+
+# GNSS constellation policy applied to the u-blox module at every boot.
+mother_ticker_gnss_protver: 18             # ubxtool -P; 18 for M8 firmware 3.01
+mother_ticker_gnss_enable: ["GPS", "GALILEO"]
+mother_ticker_gnss_disable: ["GLONASS", "BEIDOU"]
+mother_ticker_gnss_stationary: true        # dynamic model 2, stationary
+
+# SSH.
+mother_ticker_ssh_allow_users: ["{{ mother_ticker_admin_user }}", "{{ mother_ticker_user }}"]
+mother_ticker_ssh_per_source_penalties: auto   # auto, true or false; auto = if OpenSSH >= 9.8
+mother_ticker_fail2ban: true
+mother_ticker_fail2ban_maxretry: 3
+mother_ticker_fail2ban_bantime: 1h
+mother_ticker_fail2ban_findtime: 10m
+
+# Metrics. Mode follows the site unless overridden.
+mother_ticker_metrics_mode: "{{ 'prometheus' if mother_ticker_site == 'main-lan' else 'syslog' }}"
+mother_ticker_syslog_host: 198.51.100.5
+mother_ticker_syslog_port: 514
+mother_ticker_syslog_transport: tcp
+mother_ticker_syslog_framing: newline
+mother_ticker_syslog_facility: 16
+mother_ticker_syslog_interval_s: 15
+
+# Health-check ladder.
+mother_ticker_health_restart_after: 4      # consecutive 30 s ticks
+mother_ticker_health_reboot_after: 40
+mother_ticker_health_min_uptime_s: 1800
+mother_ticker_health_reboot_enabled: true
+
+# TUI.
+mother_ticker_console_tui: true            # run the TUI on tty1
+mother_ticker_tui_allow_shell: true
+mother_ticker_console_fontsize: "8x16"     # 100x30 cells on the 800x480 panel
+
+# Read-only root (raspi-config overlayfs). Follows the site unless overridden.
+mother_ticker_overlay: "{{ mother_ticker_site == 'malware-net' }}"
+mother_ticker_force_on_overlay: false      # re-run the role on an overlay root anyway
+
+# Packages. `mother_ticker_offline: true` skips every apt task and expects the
+# packages to be present already (the pre-staged unit).
+mother_ticker_offline: false
+mother_ticker_wheelhouse: ""               # controller path with wheels for pip --no-index
+mother_ticker_packages:
+  - chrony
+  - gpsd
+  - gpsd-clients
+  - pps-tools
+  - nftables
+  - python3
+  - python3-venv
+  - python3-pip
+  - i2c-tools
+  - initramfs-tools
+mother_ticker_packages_optional:
+  - gpsd-tools                             # trixie moved ubxtool here
+  - python3-systemd                        # fail2ban systemd backend
+mother_ticker_packages_remove:
+  - fake-hwclock
+  - avahi-daemon
+  - modemmanager
+  - triggerhappy
+  - dphys-swapfile
+  - bluez
+mother_ticker_services_disable:
+  - bluetooth.service
+  - hciuart.service
+  - avahi-daemon.service
+  - avahi-daemon.socket
+  - ModemManager.service
+  - triggerhappy.service
+  - triggerhappy.socket
+  - wpa_supplicant.service
+  - systemd-timesyncd.service
+  - dphys-swapfile.service
+  - serial-getty@ttyAMA0.service
+  - serial-getty@ttyS0.service

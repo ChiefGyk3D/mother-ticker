@@ -1,0 +1,6 @@
+# Managed by Ansible (mother-ticker). Read by /usr/local/sbin/mother-ticker-gnss-config
+# at every boot, after gpsd is up. Names are ubxtool's.
+UBX_PROTVER="{{ mother_ticker_gnss_protver }}"
+UBX_ENABLE="{{ mother_ticker_gnss_enable | join(' ') }}"
+UBX_DISABLE="{{ mother_ticker_gnss_disable | join(' ') }}"
+UBX_STATIONARY="{{ '1' if mother_ticker_gnss_stationary else '0' }}"

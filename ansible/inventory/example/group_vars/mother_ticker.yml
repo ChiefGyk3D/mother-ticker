@@ -1,0 +1,17 @@
+---
+# Shared by both units. Per-site values are in host_vars/.
+
+# The account Raspberry Pi Imager created. It keeps a normal shell and full sudo.
+ansible_user: admin
+mother_ticker_admin_user: admin
+
+# Public NTP servers the main-LAN unit falls back to if GPS is lost for a long
+# time. The malware-net unit overrides this with an empty list.
+mother_ticker_upstream_ntp:
+  - time.cloudflare.com
+  - time.nist.gov
+
+# Measured per unit after first lock: the NMEA sentence's offset from the PPS
+# edge. Start at 0.0, then read it from `chronyc sourcestats` (see RUNBOOK.md)
+# and set it per host if the NMEA source shows a consistent offset.
+mother_ticker_nmea_offset: 0.0

@@ -1,0 +1,81 @@
+---
+# Post-conditions. Each failure names what to look at.
+
+- name: Confirm chronyd dropped privileges
+  ansible.builtin.command: ps -o user= -C chronyd
+  register: mother_ticker_chronyd_user
+  changed_when: false
+  failed_when: false
+
+- name: chronyd must run as _chrony
+  ansible.builtin.assert:
+    that: "'_chrony' in mother_ticker_chronyd_user.stdout"
+    fail_msg: >-
+      chronyd is not running as _chrony (got '{{ mother_ticker_chronyd_user.stdout }}').
+      Check `systemctl status chrony`.
+
+- name: Check the PPS device
+  ansible.builtin.stat:
+    path: "/dev/{{ mother_ticker_pps_device }}"
+  register: mother_ticker_pps_node
+
+- name: PPS device must exist
+  ansible.builtin.assert:
+    that: mother_ticker_pps_node.stat.exists
+    fail_msg: >-
+      /dev/{{ mother_ticker_pps_device }} is missing. The pps-gpio overlay did not load:
+      check `dmesg | grep pps` and the MOTHER TICKER block in /boot/firmware/config.txt.
+
+- name: Check the RTC device
+  ansible.builtin.stat:
+    path: /dev/rtc0
+  register: mother_ticker_rtc_node
+
+- name: RTC must exist
+  ansible.builtin.assert:
+    that: mother_ticker_rtc_node.stat.exists
+    fail_msg: >-
+      /dev/rtc0 is missing. Check `dmesg | grep -i rtc` and `i2cdetect -y 1`
+      (the RV-3028 answers at 0x52).
+
+- name: Check the GPS serial device
+  ansible.builtin.stat:
+    path: "{{ mother_ticker_gps_device }}"
+  register: mother_ticker_gps_node
+
+- name: GPS UART must exist
+  ansible.builtin.assert:
+    that: mother_ticker_gps_node.stat.exists
+    fail_msg: >-
+      {{ mother_ticker_gps_device }} is missing. enable_uart=1 and dtoverlay=disable-bt
+      need a reboot to take effect.
+
+# service_facts lists services only; this checks a timer too.
+- name: Services that must be active  # noqa: command-instead-of-module
+  ansible.builtin.command: systemctl is-active {{ item }}
+  loop:
+    - chrony.service
+    - gpsd.service
+    - nftables.service
+    - mother-ticker-healthcheck.timer
+  register: mother_ticker_active
+  changed_when: false
+  failed_when: mother_ticker_active.stdout != 'active'
+
+- name: One-shot status from the appliance itself
+  ansible.builtin.command: "{{ mother_ticker_install_dir }}/venv/bin/mother-ticker status"
+  register: mother_ticker_status
+  changed_when: false
+  failed_when: false
+
+- name: Show the status
+  ansible.builtin.debug:
+    msg: "{{ mother_ticker_status.stdout_lines }}"
+
+- name: Warn when the appliance is not yet healthy
+  ansible.builtin.debug:
+    msg: >-
+      Health is not OK yet (exit {{ mother_ticker_status.rc }}). A fresh receiver needs minutes
+      to a first fix and chrony needs a few more to trust PPS. Re-run the verify tag later, or
+      watch the TUI. RUNBOOK.md explains each state.
+  when: mother_ticker_status.rc != 0

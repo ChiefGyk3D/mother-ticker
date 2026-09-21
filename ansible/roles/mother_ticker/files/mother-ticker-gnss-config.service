@@ -1,0 +1,18 @@
+# Managed by Ansible (mother-ticker). Applies the constellation policy to the
+# u-blox module through gpsd at every boot, so it does not depend on the
+# module's saved configuration surviving a battery change.
+[Unit]
+Description=Mother Ticker GNSS receiver configuration
+Documentation=https://github.com/ChiefGyk3D/mother-ticker
+After=gpsd.service
+Requires=gpsd.service
+
+[Service]
+Type=oneshot
+EnvironmentFile=/etc/default/mother-ticker-gnss
+ExecStart=/usr/local/sbin/mother-ticker-gnss-config
+RemainAfterExit=yes
+TimeoutStartSec=120
+
+[Install]
+WantedBy=multi-user.target

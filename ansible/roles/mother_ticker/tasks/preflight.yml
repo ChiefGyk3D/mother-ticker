@@ -1,0 +1,59 @@
+---
+- name: Require the inventory to name the admin account
+  ansible.builtin.assert:
+    that:
+      - mother_ticker_admin_user is defined
+      - mother_ticker_admin_user | length > 0
+    fail_msg: "Set mother_ticker_admin_user (the account Raspberry Pi Imager created) in the inventory."
+
+- name: Require a known site
+  ansible.builtin.assert:
+    that: mother_ticker_site in ['main-lan', 'malware-net']
+    fail_msg: "mother_ticker_site must be main-lan or malware-net, got {{ mother_ticker_site }}"
+
+- name: Require a Debian-family 64-bit target
+  ansible.builtin.assert:
+    that:
+      - ansible_facts['os_family'] == 'Debian'
+      - ansible_facts['architecture'] == 'aarch64'
+    fail_msg: >-
+      Expected Raspberry Pi OS (64-bit). Found {{ ansible_facts['distribution'] }}
+      {{ ansible_facts['distribution_version'] }} on {{ ansible_facts['architecture'] }}.
+
+- name: Read the kernel command line
+  ansible.builtin.slurp:
+    src: /proc/cmdline
+  register: mother_ticker_cmdline
+
+- name: Refuse to provision a root filesystem that is a read-only overlay
+  ansible.builtin.fail:
+    msg: >-
+      This unit is running with boot=overlay. Every change would vanish at reboot.
+      Run `sudo mother-ticker-maint on` (or the TUI's maintenance menu), reboot, then re-run;
+      or set mother_ticker_force_on_overlay=true if you really mean it.
+  when:
+    - "'boot=overlay' in (mother_ticker_cmdline.content | b64decode)"
+    - not mother_ticker_force_on_overlay | bool
+
+- name: Locate the firmware boot partition
+  ansible.builtin.stat:
+    path: /boot/firmware/config.txt
+  register: mother_ticker_boot_firmware
+
+- name: Require the modern boot layout
+  ansible.builtin.assert:
+    that: mother_ticker_boot_firmware.stat.exists
+    fail_msg: >-
+      /boot/firmware/config.txt not found. This role targets Raspberry Pi OS bookworm or newer,
+      where the firmware partition is mounted at /boot/firmware.
+
+- name: Set the hostname
+  ansible.builtin.hostname:
+    name: "{{ mother_ticker_hostname }}"
+
+- name: Map the hostname in /etc/hosts
+  ansible.builtin.lineinfile:
+    path: /etc/hosts
+    regexp: '^127\.0\.1\.1\s'
+    line: "127.0.1.1\t{{ mother_ticker_hostname }}"
+    mode: "0644"

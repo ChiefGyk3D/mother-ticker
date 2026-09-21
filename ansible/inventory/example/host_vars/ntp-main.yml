@@ -1,0 +1,16 @@
+---
+mother_ticker_site: main-lan
+
+# Who may ask this unit for time (UDP 123).
+mother_ticker_ntp_allow:
+  - 192.0.2.0/24
+  - 2001:db8:1::/64
+
+# Who may SSH in (TCP 22). Keep this to the management subnet.
+mother_ticker_mgmt_allow:
+  - 192.0.2.0/24
+
+# Prometheus scrapers allowed to reach the exporter port.
+mother_ticker_metrics_allow:
+  - 192.0.2.10/32
+mother_ticker_metrics_port: 9101

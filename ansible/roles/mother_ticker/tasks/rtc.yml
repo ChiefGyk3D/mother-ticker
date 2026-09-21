@@ -1,0 +1,21 @@
+---
+# The RV-3028-C7 appears as /dev/rtc0 once the i2c-rtc overlay loads. Two
+# things make it useful: fake-hwclock must be gone (it would write a stale
+# timestamp back into the real RTC at shutdown), and something has to copy
+# the RTC into the system clock at boot. Debian's hwclock-set udev script
+# exits early under systemd, so the role installs its own udev rule.
+# chrony's `rtcsync` keeps the RTC updated from the disciplined clock.
+
+- name: Copy the RTC into the system clock when the device appears
+  ansible.builtin.copy:
+    src: 86-mother-ticker-rtc.rules
+    dest: /etc/udev/rules.d/86-mother-ticker-rtc.rules
+    mode: "0644"
+  notify: Reload udev
+
+- name: Record that the RTC keeps UTC
+  ansible.builtin.copy:
+    dest: /etc/adjtime
+    content: "0.0 0 0.0\n0\nUTC\n"
+    mode: "0644"
+    force: false

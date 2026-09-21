@@ -1,0 +1,15 @@
+# Managed by Ansible (mother-ticker). One tick of the escalation ladder.
+[Unit]
+Description=Mother Ticker health check
+Documentation=https://github.com/ChiefGyk3D/mother-ticker
+After=gpsd.service chrony.service
+
+[Service]
+Type=oneshot
+Environment=MOTHER_TICKER_CONFIG=/etc/mother-ticker/config.toml
+ExecStart={{ mother_ticker_install_dir }}/venv/bin/mother-ticker healthcheck
+RuntimeDirectory=mother-ticker
+RuntimeDirectoryPreserve=yes
+# Exit status is the health level (1 warning, 2 critical); only a crash is a failure.
+SuccessExitStatus=1 2
+TimeoutStartSec=90

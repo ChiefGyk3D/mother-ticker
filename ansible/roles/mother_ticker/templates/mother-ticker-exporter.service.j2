@@ -1,0 +1,28 @@
+# Managed by Ansible (mother-ticker). Metrics writer chosen by the site config.
+[Unit]
+Description=Mother Ticker metrics exporter ({{ mother_ticker_metrics_mode }})
+Documentation=https://github.com/ChiefGyk3D/mother-ticker
+After=network-online.target gpsd.service chrony.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User={{ mother_ticker_user }}
+Group={{ mother_ticker_user }}
+SupplementaryGroups=video
+Environment=MOTHER_TICKER_CONFIG=/etc/mother-ticker/config.toml
+ExecStart={{ mother_ticker_install_dir }}/venv/bin/mother-ticker exporter
+Restart=always
+RestartSec=5
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=yes
+ProtectKernelTunables=yes
+ProtectControlGroups=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+MemoryMax=96M
+
+[Install]
+WantedBy=multi-user.target

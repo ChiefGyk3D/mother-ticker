@@ -1,0 +1,100 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "mother-ticker"
+description = "GPS-disciplined stratum-1 NTP appliance for Raspberry Pi 4 with a local status TUI and metrics export"
+readme = "README.md"
+license = "AGPL-3.0-or-later"
+license-files = ["LICENSE", "NOTICE"]
+requires-python = ">=3.11"
+authors = [{ name = "Renegade Penguin LLC" }]
+keywords = ["ntp", "chrony", "gpsd", "pps", "stratum-1", "raspberry-pi", "textual"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: Console",
+    "Intended Audience :: System Administrators",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: System :: Networking :: Time Synchronization",
+]
+dynamic = ["version"]
+dependencies = [
+    "textual>=1.0,<9",
+]
+
+[project.optional-dependencies]
+dev = [
+    "ruff>=0.6",
+    "mypy>=1.11",
+    "pytest>=8",
+    "bandit>=1.7",
+    "yamllint>=1.35",
+    "ansible-core>=2.16",
+    "ansible-lint>=24",
+    "build>=1.2",
+    "pyyaml>=6",
+    "types-PyYAML",
+    "playwright>=1.45",
+]
+
+[project.scripts]
+mother-ticker = "mother_ticker.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/ChiefGyk3D/mother-ticker"
+Issues = "https://github.com/ChiefGyk3D/mother-ticker/issues"
+Changelog = "https://github.com/ChiefGyk3D/mother-ticker/blob/main/CHANGELOG.md"
+
+[tool.setuptools]
+package-dir = { "" = "src" }
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+mother_ticker = ["tui/*.tcss", "py.typed"]
+
+[tool.setuptools.dynamic]
+version = { attr = "mother_ticker.version.__version__" }
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B", "S", "N", "RUF", "SIM", "PL"]
+ignore = [
+    "PLR0913",  # dataclasses and collectors legitimately take many arguments
+    "PLR2004",  # magic numbers in parsers are documented inline
+    "S603",     # subprocess without shell=True is the safe form; arguments are fixed lists
+    "S607",     # commands are resolved from PATH on purpose so the venv works on any Pi OS
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["S101", "PLR0915", "S108"]
+# cli.py imports each subcommand lazily so the exporter and health check never load textual
+"src/mother_ticker/cli.py" = ["PLC0415"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+warn_unreachable = true
+files = ["src", "tests"]
+
+[[tool.mypy.overrides]]
+module = "tests.*"
+disallow_untyped_decorators = false
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+
+[tool.bandit]
+exclude_dirs = ["tests", ".venv"]
+skips = ["B404", "B603", "B607"]

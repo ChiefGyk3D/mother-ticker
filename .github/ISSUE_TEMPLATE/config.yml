@@ -1,0 +1,15 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Renegade Penguin LLC
+---
+blank_issues_enabled: true
+contact_links:
+  - name: Something is wrong with the time it serves
+    url: https://github.com/ChiefGyk3D/mother-ticker/blob/main/RUNBOOK.md
+    about: >-
+      Symptom first: lost fix, dead PPS, chrony on the wrong source. The runbook
+      names what each state looks like and how to get out of it. File a bug if it
+      does not.
+  - name: Report a vulnerability
+    url: https://github.com/ChiefGyk3D/mother-ticker/security/advisories/new
+    about: >-
+      Privately, please. A unit is something other machines trust for time.

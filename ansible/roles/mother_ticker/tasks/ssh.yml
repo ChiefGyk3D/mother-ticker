@@ -1,0 +1,37 @@
+---
+- name: Read the OpenSSH server version
+  ansible.builtin.command: dpkg-query -W -f='${Version}' openssh-server
+  register: mother_ticker_sshd_version
+  changed_when: false
+
+- name: Decide whether PerSourcePenalties is available (OpenSSH 9.8+)
+  ansible.builtin.set_fact:
+    mother_ticker_ssh_penalties: >-
+      {{ (mother_ticker_ssh_per_source_penalties | string | lower) in ['true', 'yes']
+         or (mother_ticker_ssh_per_source_penalties | string | lower == 'auto'
+             and (mother_ticker_sshd_version.stdout
+                  | regex_replace('^[0-9]+:', '')
+                  | regex_replace('p.*$', '')) is version('9.8', '>=')) }}
+
+- name: Harden sshd
+  ansible.builtin.template:
+    src: sshd.conf.j2
+    dest: /etc/ssh/sshd_config.d/00-mother-ticker.conf
+    mode: "0600"
+    validate: "sshd -t -f %s"
+  notify: Restart sshd
+
+- name: Configure fail2ban
+  ansible.builtin.template:
+    src: jail.local.j2
+    dest: /etc/fail2ban/jail.local
+    mode: "0644"
+  notify: Restart fail2ban
+  when: mother_ticker_fail2ban | bool
+
+- name: Enable fail2ban
+  ansible.builtin.systemd:
+    name: fail2ban.service
+    enabled: true
+    state: started
+  when: mother_ticker_fail2ban | bool

@@ -1,0 +1,54 @@
+# Mother Ticker on-box install configuration.
+# Copy to /etc/mother-ticker/install.conf and edit, then: sudo mother-ticker-install
+# (or, from a checkout on the unit: sudo scripts/install.sh --config ./install.conf)
+#
+# Shell-style KEY=VALUE, one per line. Lists are space separated.
+# Anything not listed here keeps the role default; put further Ansible
+# variables in a YAML file and point EXTRA_VARS_FILE at it.
+
+# main-lan or malware-net
+SITE=main-lan
+
+# The account Raspberry Pi Imager created. Keeps a normal shell and full sudo.
+ADMIN_USER=admin
+
+# Hostname to set (defaults to the current hostname when empty).
+HOSTNAME=
+
+# Who may ask this unit for time (UDP 123).
+NTP_ALLOW="192.0.2.0/24"
+
+# Who may SSH in (TCP 22).
+MGMT_ALLOW="192.0.2.0/24"
+
+# main-lan: Prometheus scrapers allowed to reach the exporter, and its port.
+METRICS_ALLOW="192.0.2.10/32"
+METRICS_PORT=9101
+
+# main-lan: public or internal NTP servers as fallback. Leave empty on malware-net.
+UPSTREAM_NTP="time.cloudflare.com time.nist.gov"
+
+# malware-net: the segment's one-way relay (RFC 5424 syslog, JSON body).
+RELAY_HOST=198.51.100.5
+RELAY_PORT=514
+RELAY_TRANSPORT=tcp        # tcp or udp
+RELAY_FRAMING=newline      # newline or octet-counted (TCP only)
+
+# malware-net: keep serving from the free-running clock if GPS is lost. 0 disables.
+ORPHAN_STRATUM=0
+
+# Read-only overlay root: auto (yes on malware-net, no on main-lan), yes, or no.
+OVERLAY=auto
+
+# Measured per unit after first lock; see RUNBOOK.md.
+NMEA_OFFSET=0.0
+
+# Network Time Security. Needs the certificate and key in place first; see docs/nts.md.
+NTS=no
+
+# Offline unit: skip every apt task and install the venv from WHEELHOUSE.
+OFFLINE=no
+WHEELHOUSE=
+
+# Optional YAML file of extra role variables (any mother_ticker_* default).
+EXTRA_VARS_FILE=

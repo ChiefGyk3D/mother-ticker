@@ -1,0 +1,19 @@
+# Uputronics GPS/RTC Expansion Board on a Raspberry Pi 4.
+# Hardware UART for the GNSS module (frees ttyAMA0 from Bluetooth).
+enable_uart=1
+{% if mother_ticker_disable_bt %}
+dtoverlay=disable-bt
+{% endif %}
+# Kernel PPS from the HAT's timepulse pin.
+dtoverlay=pps-gpio,gpiopin={{ mother_ticker_pps_gpio }}
+# RV-3028-C7 real-time clock on I2C.
+dtparam=i2c_arm=on
+dtoverlay={{ mother_ticker_rtc_overlay }}
+{% if mother_ticker_hw_watchdog %}
+# BCM2711 hardware watchdog, petted by systemd.
+dtparam=watchdog=on
+{% endif %}
+{% if mother_ticker_disable_wifi %}
+# Wired appliance.
+dtoverlay=disable-wifi
+{% endif %}

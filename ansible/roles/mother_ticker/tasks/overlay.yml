@@ -1,0 +1,33 @@
+---
+- name: Check whether the root filesystem is already an overlay
+  ansible.builtin.slurp:
+    src: /boot/firmware/cmdline.txt
+  register: mother_ticker_boot_cmdline
+
+- name: Enable the read-only overlay (raspi-config)
+  ansible.builtin.command: /usr/local/sbin/mother-ticker-maint off --no-reboot
+  register: mother_ticker_overlay_result
+  changed_when: "'already' not in mother_ticker_overlay_result.stdout"
+  when:
+    - mother_ticker_overlay | bool
+    - "'boot=overlay' not in (mother_ticker_boot_cmdline.content | b64decode)"
+
+- name: Reboot into the overlay
+  ansible.builtin.reboot:
+    msg: "Mother Ticker: rebooting into the read-only overlay"
+    reboot_timeout: 300
+  when: "'already' not in (mother_ticker_overlay_result.stdout | default('already'))"
+
+- name: Confirm the overlay is active
+  ansible.builtin.slurp:
+    src: /proc/cmdline
+  register: mother_ticker_cmdline_after
+  when: mother_ticker_overlay | bool
+
+- name: Overlay must be active
+  ansible.builtin.assert:
+    that: "'boot=overlay' in (mother_ticker_cmdline_after.content | b64decode)"
+    fail_msg: >-
+      The overlay was requested but /proc/cmdline has no boot=overlay.
+      Check `raspi-config nonint get_overlay_now`.
+  when: mother_ticker_overlay | bool

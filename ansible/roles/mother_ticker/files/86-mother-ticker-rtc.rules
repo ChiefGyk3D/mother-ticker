@@ -1,0 +1,5 @@
+# Managed by Ansible (mother-ticker).
+# Copy the RV-3028 RTC into the system clock as soon as the device appears,
+# so chrony starts from a plausible time before GPS lock. Debian's own
+# hwclock-set script exits early under systemd, which is why this exists.
+ACTION=="add", SUBSYSTEM=="rtc", KERNEL=="rtc0", RUN+="/sbin/hwclock --hctosys --utc"

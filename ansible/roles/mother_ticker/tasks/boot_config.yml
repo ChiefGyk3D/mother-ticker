@@ -1,0 +1,45 @@
+---
+# /boot/firmware/config.txt and cmdline.txt. Any change here needs a reboot,
+# which the role performs once, after every task has run.
+
+- name: Configure device tree overlays for the HAT
+  ansible.builtin.blockinfile:
+    path: /boot/firmware/config.txt
+    marker: "# {mark} MOTHER TICKER (managed by Ansible)"
+    block: "{{ lookup('ansible.builtin.template', 'config.txt.j2') }}"
+  notify: Reboot required
+
+- name: Release the hardware UART from the kernel console
+  ansible.builtin.replace:
+    path: /boot/firmware/cmdline.txt
+    regexp: 'console=(serial0|ttyAMA0|ttyS0),\d+\s*'
+    replace: ""
+  notify: Reboot required
+
+- name: Keep the console on tty1 for the TUI
+  ansible.builtin.lineinfile:
+    path: /boot/firmware/cmdline.txt
+    regexp: '^(?!.*console=tty1)(.*)$'
+    line: '\1 console=tty1'
+    backrefs: true
+  notify: Reboot required
+
+- name: Disable the Bluetooth UART helper, which would grab the PL011
+  ansible.builtin.systemd:
+    name: hciuart.service
+    enabled: false
+    state: stopped
+    masked: true
+  failed_when: false
+  when: mother_ticker_disable_bt | bool
+
+- name: Stop serial logins on the GPS UART
+  ansible.builtin.systemd:
+    name: "{{ item }}"
+    enabled: false
+    state: stopped
+    masked: true
+  loop:
+    - serial-getty@ttyAMA0.service
+    - serial-getty@ttyS0.service
+  failed_when: false

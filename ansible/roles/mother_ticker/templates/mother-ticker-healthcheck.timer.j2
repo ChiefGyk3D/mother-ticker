@@ -1,0 +1,12 @@
+# Managed by Ansible (mother-ticker).
+[Unit]
+Description=Run the Mother Ticker health check every 30 seconds
+
+[Timer]
+OnBootSec=3min
+OnUnitActiveSec=30s
+AccuracySec=5s
+Unit=mother-ticker-healthcheck.service
+
+[Install]
+WantedBy=timers.target

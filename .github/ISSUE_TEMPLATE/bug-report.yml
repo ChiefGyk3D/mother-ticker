@@ -1,0 +1,38 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Renegade Penguin LLC
+---
+name: Bug report
+description: Something the docs say should work does not.
+title: "bug: <short description>"
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Check `RUNBOOK.md` first if the symptom is about served time; it covers
+        the common states. Redact real subnets, addresses and hostnames.
+  - type: input
+    id: version
+    attributes:
+      label: Version and site
+      placeholder: mother-ticker 0.1.0, site main-lan
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: What happened
+      description: "`mother-ticker status`, the relevant `journalctl -u ...` lines, or the Ansible output."
+      render: text
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: How to reproduce
