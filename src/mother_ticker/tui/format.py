@@ -4,7 +4,13 @@
 
 from __future__ import annotations
 
-from mother_ticker.collectors.model import ChronyTracking, GnssStatus, PpsStatus, SystemStatus
+from mother_ticker.collectors.model import (
+    ChronyTracking,
+    GnssStatus,
+    NetworkStatus,
+    PpsStatus,
+    SystemStatus,
+)
 from mother_ticker.collectors.system import throttle_reasons
 
 
@@ -92,3 +98,44 @@ def system_lines(system: SystemStatus) -> list[str]:
     else:
         lines.append("Throttle   none")
     return lines
+
+
+def gnss_panel(gnss: GnssStatus) -> str:
+    """Dashboard panel body: fix line, then position when there is one."""
+    lines = [gnss_summary(gnss)]
+    if gnss.reachable and gnss.latitude is not None and gnss.longitude is not None:
+        lines.append(f"{gnss.latitude:.4f}, {gnss.longitude:.4f}")
+        if gnss.altitude_m is not None:
+            lines.append(f"altitude {gnss.altitude_m:.0f} m")
+    if gnss.error:
+        lines.append(gnss.error)
+    return "\n".join(lines)
+
+
+def chrony_panel(tracking: ChronyTracking) -> str:
+    lines = chrony_summary(tracking).split("\n")
+    if tracking.reachable and tracking.synchronised:
+        lines.append(f"rms {offset_text(tracking.rms_offset_s)}")
+        lines.append(f"root disp {offset_text(tracking.root_dispersion_s).lstrip('+')}")
+        lines.append(f"freq {tracking.frequency_ppm:+.3f} ppm")
+    elif tracking.error:
+        lines.append(tracking.error)
+    return "\n".join(lines)
+
+
+def pps_panel(pps: PpsStatus) -> str:
+    lines = pps_summary(pps).split("\n")
+    if pps.present and pps.assert_sequence is not None:
+        lines.append(f"{pps.assert_sequence} edges since boot")
+    lines.append(f"/dev/{pps.device}")
+    return "\n".join(lines)
+
+
+def network_panel(network: NetworkStatus, hostname: str) -> str:
+    lines = [hostname]
+    addrs = network.primary_addresses()
+    lines.extend(addrs[:3] if addrs else ["no address"])
+    up = [i.name for i in network.interfaces if i.name != "lo" and i.state == "UP"]
+    if up:
+        lines.append("up: " + ", ".join(up))
+    return "\n".join(lines)

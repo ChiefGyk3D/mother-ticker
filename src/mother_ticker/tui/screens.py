@@ -19,10 +19,11 @@ from mother_ticker.collectors.model import Snapshot
 from mother_ticker.health.evaluate import HealthReport, Level
 from mother_ticker.tui import art
 from mother_ticker.tui.format import (
-    chrony_summary,
+    chrony_panel,
+    gnss_panel,
     gnss_summary,
-    offset_text,
-    pps_summary,
+    network_panel,
+    pps_panel,
     system_lines,
 )
 from mother_ticker.tui.messages import SnapshotUpdated
@@ -140,16 +141,10 @@ class DashboardScreen(Screen[None]):
             )
             widget.set_text(text)
 
-        t = snap.chrony.tracking
-        panel("#panel-gnss", "gnss", gnss_summary(snap.gnss))
-        panel(
-            "#panel-chrony",
-            "chrony",
-            chrony_summary(t) + (f", rms {offset_text(t.rms_offset_s)}" if t.reachable else ""),
-        )
-        panel("#panel-pps", "pps", pps_summary(snap.pps))
-        addrs = snap.network.primary_addresses()
-        panel("#panel-net", "network", "\n".join(addrs[:3]) if addrs else "no address")
+        panel("#panel-gnss", "gnss", gnss_panel(snap.gnss))
+        panel("#panel-chrony", "chrony", chrony_panel(snap.chrony.tracking))
+        panel("#panel-pps", "pps", pps_panel(snap.pps))
+        panel("#panel-net", "network", network_panel(snap.network, snap.system.hostname))
         self.query_one("#footer-right", Static).update(
             f"{snap.system.hostname}    site {snap.site}    v{snap.version}"
         )
@@ -165,14 +160,18 @@ class MenuScreen(_Base):
             Option("chrony detail: tracking and sources", id="chrony"),
             Option("Services: restart, view logs", id="services"),
             Option("Network: interfaces and addresses", id="network"),
-            Option("System: uptime, temperature, memory, disk", id="system"),
+            Option("System: uptime, thermal, memory, disk", id="system"),
             Option("Maintenance: reboot, read-only overlay", id="maint"),
             Option("About Mother Ticker", id="about"),
         ]
         if self.mt_app.config.tui.allow_shell:
             options.append(Option("Drop to a shell (exits the TUI)", id="shell"))
         options.append(Option("Back to the dashboard", id="back"))
-        yield OptionList(*options, id="menu")
+        with Horizontal(id="menu-body"):
+            yield Static(art.LOGO, id="menu-logo", markup=False)
+            with Vertical(id="menu-column"):
+                yield Static("MOTHER TICKER", id="menu-heading", markup=False)
+                yield OptionList(*options, id="menu")
         yield self._hint("Up/Down or Tab: move    Enter: select    Esc: dashboard")
 
     def on_mount(self) -> None:

@@ -143,12 +143,13 @@ class TestScreenshots:
     def test_every_generated_screenshot_is_shown(self) -> None:
         shots = runpy.run_path(str(ROOT / "scripts/render_screenshots.py"))["SHOTS"]
         readme = (ROOT / "README.md").read_text(encoding="utf-8")
-        unshown = [name for name in shots if f"docs/images/{name}.svg" not in readme]
+        unshown = [name for name in shots if f"docs/images/{name}.png" not in readme]
         assert not unshown, f"screenshots generated but not in README: {unshown}"
         for name in shots:
-            assert (ROOT / "docs/images" / f"{name}.svg").exists(), (
-                f"docs/images/{name}.svg missing; run make screenshots"
-            )
+            for ext in ("svg", "png"):
+                assert (ROOT / "docs/images" / f"{name}.{ext}").exists(), (
+                    f"docs/images/{name}.{ext} missing; run make screenshots"
+                )
 
 
 class TestWorkflows:

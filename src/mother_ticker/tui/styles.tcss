@@ -45,24 +45,26 @@ Screen {
 }
 
 #panels {
-    height: auto;
+    height: 1fr;
     margin: 1 2 0 2;
     grid-size: 2;
-    grid-gutter: 1 2;
+    grid-gutter: 0 2;
 }
 .panel {
-    height: 7;
+    height: 1fr;
     border: solid ansi_bright_black;
     padding: 0 0 0 1;
 }
 .panel-icon {
     width: 17;
-    height: 5;
+    height: 1fr;
+    content-align: left middle;
     color: ansi_bright_cyan;
 }
 .panel-text {
     width: 1fr;
-    height: 5;
+    height: 1fr;
+    content-align: left middle;
     padding-left: 1;
 }
 .panel.warning {
@@ -146,6 +148,28 @@ OptionList {
     margin: 1 2;
     height: auto;
     max-height: 100%;
+}
+#menu-body {
+    height: 1fr;
+    align: center middle;
+    padding: 0 2;
+}
+#menu-logo {
+    width: 50;
+    height: 15;
+    color: ansi_bright_cyan;
+}
+#menu-column {
+    width: 1fr;
+    height: auto;
+}
+#menu-heading {
+    padding: 0 2;
+    text-style: bold;
+    color: ansi_bright_cyan;
+}
+#menu {
+    margin: 0 2;
 }
 DataTable {
     margin: 0 1;
