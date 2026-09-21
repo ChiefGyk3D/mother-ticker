@@ -64,8 +64,9 @@ You can run the TUI on any Linux machine without the hardware:
 - The TUI is tested with Textual's pilot in a headless terminal. **Any change
   that alters what the TUI looks like regenerates the screenshots in the same
   pull request**: `make screenshots` renders `docs/images/*.svg` from the demo
-  data, and the hygiene test checks that every generated screenshot is in the
-  README. Then look at them. Tests pass on things that are visibly wrong; the
+  data and rasterises them to PNG with Chromium (`pip install playwright &&
+  playwright install chromium` once), and the hygiene test checks that every
+  generated screenshot is in the README. Then look at the PNGs. Tests pass on things that are visibly wrong; the
   first cut of the big clock passed every test and was torn in half by
   centre alignment until somebody rasterised the SVG and looked.
 - `mother-ticker tui --demo [warning|critical]` runs the TUI with fabricated

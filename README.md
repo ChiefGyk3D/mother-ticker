@@ -244,45 +244,46 @@ interface with fabricated data on any Linux or macOS terminal.
 
 ## Screenshots
 
-Rendered headless from the demo data by `make screenshots`, so what is shown
-is what the code draws, at the 7 inch panel's 100x30 cells.
+Rendered headless from the demo data by `make screenshots` (Textual draws
+the SVG, Chromium rasterises it), so what is shown is what the code draws,
+at the 7 inch panel's 100x30 cells.
 
 **Dashboard, all systems nominal**
 
-![dashboard](docs/images/dashboard.svg)
+![dashboard](docs/images/dashboard.png)
 
 **Dashboard, warning: GPS lost, serving stratum 2 from a public server, SoC warm**
 
-![dashboard warning](docs/images/dashboard-warning.svg)
+![dashboard warning](docs/images/dashboard-warning.png)
 
 **Dashboard, critical: no PPS, no fix, chrony unsynchronised** (the banner
 blinks; this is its steady half)
 
-![dashboard critical](docs/images/dashboard-critical.svg)
+![dashboard critical](docs/images/dashboard-critical.png)
 
 **Menu**
 
-![menu](docs/images/menu.svg)
+![menu](docs/images/menu.png)
 
 **GNSS detail**
 
-![gnss detail](docs/images/gnss.svg)
+![gnss detail](docs/images/gnss.png)
 
 **chrony detail**
 
-![chrony detail](docs/images/chrony.svg)
+![chrony detail](docs/images/chrony.png)
 
 **Services**
 
-![services](docs/images/services.svg)
+![services](docs/images/services.png)
 
 **System**
 
-![system](docs/images/system.svg)
+![system](docs/images/system.png)
 
 **About**
 
-![about](docs/images/about.svg)
+![about](docs/images/about.png)
 
 ## Metrics
 

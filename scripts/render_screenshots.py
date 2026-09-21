@@ -1,18 +1,24 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: AGPL-3.0-or-later
 # Copyright (C) 2026 Renegade Penguin LLC
-"""Render the TUI headless with demo data and save SVG screenshots for the docs.
+"""Render the TUI headless with demo data and save screenshots for the docs.
 
     scripts/render_screenshots.py [OUT_DIR]      default docs/images
 
-The screenshots in the README are what this produces, never hand-taken, so
-they cannot drift from the code. Size is 100x30 cells, the 7 inch panel with
-the default console font.
+Textual exports an SVG; Chromium (through Playwright) rasterises it to the
+PNG the README shows. The SVG is kept beside it. PNG rather than SVG because
+GitHub shows README images with external fonts blocked and the fallback
+monospace differs per viewer, while a PNG is the same pixels everywhere.
+Size is 100x30 cells, the 7 inch panel with the default console font.
+
+Needs `pip install playwright` and `playwright install chromium`; without
+them the SVGs are written and the PNG step is skipped with a warning.
 """
 
 from __future__ import annotations
 
 import asyncio
+import os
 import sys
 from pathlib import Path
 
@@ -62,13 +68,50 @@ async def render_one(name: str, state: DemoState, target: str | None, out_dir: P
         return path
 
 
+def rasterise(svgs: list[Path]) -> bool:
+    """SVG to PNG with Chromium, shown as <img> exactly as GitHub does. False if unavailable."""
+    try:
+        from playwright.sync_api import sync_playwright  # noqa: PLC0415  optional dependency
+    except ImportError:
+        print("playwright not installed; PNGs not regenerated", file=sys.stderr)
+        return False
+    executable = os.environ.get("MOTHER_TICKER_CHROMIUM")
+    try:
+        with sync_playwright() as pw:
+            browser = (
+                pw.chromium.launch(executable_path=executable)
+                if executable
+                else pw.chromium.launch()
+            )
+            page = browser.new_page(device_scale_factor=2)
+            for svg in svgs:
+                html = svg.with_suffix(".html")
+                html.write_text(
+                    '<html><body style="margin:0;background:#fff">'
+                    f'<img id="shot" src="file://{svg.resolve()}"></body></html>',
+                    encoding="utf-8",
+                )
+                page.goto(f"file://{html.resolve()}")
+                page.wait_for_timeout(400)
+                page.locator("#shot").screenshot(path=str(svg.with_suffix(".png")), timeout=15000)
+                html.unlink()
+                print(svg.with_suffix(".png"))
+            browser.close()
+    except Exception as exc:
+        print(f"chromium rasterisation failed: {exc}", file=sys.stderr)
+        return False
+    return True
+
+
 def main(argv: list[str]) -> int:
     out_dir = Path(argv[1]) if len(argv) > 1 else Path("docs/images")
     out_dir.mkdir(parents=True, exist_ok=True)
+    svgs: list[Path] = []
     for name, (state, target) in SHOTS.items():
         path = asyncio.run(render_one(name, state, target, out_dir))
         print(path)
-    return 0
+        svgs.append(path)
+    return 0 if rasterise(svgs) else 1
 
 
 if __name__ == "__main__":
