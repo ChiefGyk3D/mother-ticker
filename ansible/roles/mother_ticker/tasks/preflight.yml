@@ -11,6 +11,11 @@
     that: mother_ticker_site in ['main-lan', 'malware-net']
     fail_msg: "mother_ticker_site must be main-lan or malware-net, got {{ mother_ticker_site }}"
 
+- name: Require a known mode
+  ansible.builtin.assert:
+    that: mother_ticker_mode in ['appliance', 'dev']
+    fail_msg: "mother_ticker_mode must be appliance or dev, got {{ mother_ticker_mode }}"
+
 - name: Require a Debian-family 64-bit target
   ansible.builtin.assert:
     that:

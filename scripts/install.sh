@@ -26,6 +26,7 @@ usage: mother-ticker-install [options]
 
   --config FILE            KEY=VALUE config (default /etc/mother-ticker/install.conf)
   --site main-lan|malware-net
+  --mode appliance|dev     appliance (default): overlay, no apt timers, no TUI shell escape, may reboot
   --hostname NAME          --admin-user USER
   --ntp-allow "CIDR ..."   --mgmt-allow "CIDR ..."   --metrics-allow "CIDR ..."
   --metrics-port N         --upstream "host ..."
@@ -44,7 +45,7 @@ USAGE
 die() { echo "mother-ticker-install: $*" >&2; exit 1; }
 
 # Defaults (the role's defaults win for anything left empty).
-SITE=main-lan OVERLAY=auto NTS=no OFFLINE=no UPSTREAM_SET=0
+SITE=main-lan MODE=appliance OVERLAY=auto NTS=no OFFLINE=no UPSTREAM_SET=0
 ADMIN_USER='' HOSTNAME_SET='' NTP_ALLOW='' MGMT_ALLOW='' METRICS_ALLOW='' METRICS_PORT=''
 UPSTREAM_NTP='' RELAY_HOST='' RELAY_PORT='' RELAY_TRANSPORT='' RELAY_FRAMING='' ORPHAN_STRATUM=''
 NMEA_OFFSET='' WHEELHOUSE='' EXTRA_VARS_FILE='' REPO_DIR=
@@ -64,6 +65,7 @@ load_conf() {
         val=${val#\'}; val=${val%\'}
         case $key in
             SITE) SITE=$val ;;
+            MODE) MODE=$val ;;
             ADMIN_USER) ADMIN_USER=$val ;;
             HOSTNAME) HOSTNAME_SET=$val ;;
             NTP_ALLOW) NTP_ALLOW=$val ;;
@@ -102,6 +104,7 @@ while [[ $# -gt 0 ]]; do
     case $1 in
         --config) shift ;;
         --site) SITE=$2; shift ;;
+        --mode) MODE=$2; shift ;;
         --hostname) HOSTNAME_SET=$2; shift ;;
         --admin-user) ADMIN_USER=$2; shift ;;
         --ntp-allow) NTP_ALLOW=$2; shift ;;
@@ -132,6 +135,7 @@ done
 
 # Validate the few things that would otherwise fail late and confusingly.
 case $SITE in main-lan|malware-net) ;; *) die "SITE must be main-lan or malware-net (got '$SITE')" ;; esac
+case $MODE in appliance|dev) ;; *) die "MODE must be appliance or dev (got '$MODE')" ;; esac
 case $OVERLAY in auto|yes|no) ;; *) die "OVERLAY must be auto, yes or no" ;; esac
 case $NTS in yes|no) ;; *) die "NTS must be yes or no" ;; esac
 case $OFFLINE in yes|no) ;; *) die "OFFLINE must be yes or no" ;; esac
@@ -140,15 +144,6 @@ if [[ -n $RELAY_TRANSPORT ]]; then case $RELAY_TRANSPORT in tcp|udp) ;; *) die "
 if [[ -n $RELAY_FRAMING ]]; then case $RELAY_FRAMING in newline|octet-counted) ;; *) die "RELAY_FRAMING must be newline or octet-counted" ;; esac; fi
 if [[ -n $EXTRA_VARS_FILE && ! -r $EXTRA_VARS_FILE ]]; then die "EXTRA_VARS_FILE $EXTRA_VARS_FILE is not readable"; fi
 if [[ $SITE == malware-net && $UPSTREAM_SET -eq 0 ]]; then UPSTREAM_NTP=; UPSTREAM_SET=1; fi
-
-# Locate the checkout: the one this script lives in, else the copy the role keeps.
-script_dir=$(cd "$(dirname "$(readlink -f "$0")")" && pwd)
-if [[ -z $REPO_DIR ]]; then
-    if [[ -f $script_dir/../ansible/site.yml ]]; then REPO_DIR=$(cd "$script_dir/.." && pwd)
-    elif [[ -f $REPO_FALLBACK/ansible/site.yml ]]; then REPO_DIR=$REPO_FALLBACK
-    fi
-fi
-[[ -f $REPO_DIR/ansible/site.yml ]] || die "no checkout found; pass --repo DIR (a clone of the repository)"
 
 hostname_value=${HOSTNAME_SET:-$(hostname)}
 
@@ -174,6 +169,7 @@ write_inventory() {
         echo "      ansible_connection: local"
         echo "      ansible_python_interpreter: /usr/bin/python3"
         echo "      mother_ticker_site: $SITE"
+        echo "      mother_ticker_mode: $MODE"
         echo "      mother_ticker_hostname: $hostname_value"
         echo "      mother_ticker_admin_user: $ADMIN_USER"
         [[ -n $NTP_ALLOW ]] && echo "      mother_ticker_ntp_allow: $(yaml_list "$NTP_ALLOW")"
@@ -204,6 +200,16 @@ fi
 
 [[ $EUID -eq 0 ]] || die "run as root: sudo $0 ..."
 
+# Locate the checkout: the one this script lives in, else the copy the role keeps.
+script_dir=$(cd "$(dirname "$(readlink -f "$0")")" && pwd)
+if [[ -z $REPO_DIR ]]; then
+    if [[ -f $script_dir/../ansible/site.yml ]]; then REPO_DIR=$(cd "$script_dir/.." && pwd)
+    elif [[ -f $REPO_FALLBACK/ansible/site.yml ]]; then REPO_DIR=$REPO_FALLBACK
+    fi
+fi
+[[ -f $REPO_DIR/ansible/site.yml ]] || die "no checkout found; pass --repo DIR (a clone of the repository)"
+
+
 if ! command -v ansible-playbook >/dev/null 2>&1; then
     if [[ $OFFLINE == yes ]]; then
         die "ansible-core is not installed and OFFLINE=yes; install it from your bundle first"
@@ -221,6 +227,7 @@ if [[ $conf_file != "$CONF_DEFAULT" ]]; then
     {
         echo "# Written by mother-ticker-install $(date -u +%Y-%m-%dT%H:%M:%SZ). Edit and re-run: sudo mother-ticker-install"
         echo "SITE=$SITE"
+        echo "MODE=$MODE"
         echo "ADMIN_USER=$ADMIN_USER"
         echo "HOSTNAME=$HOSTNAME_SET"
         echo "NTP_ALLOW=\"$NTP_ALLOW\""
@@ -249,7 +256,7 @@ cmd=(ansible-playbook -i "$INV_DIR/hosts.yml" -c local site.yml)
 [[ $check -eq 1 ]] && cmd+=(--check --diff)
 [[ -n $EXTRA_VARS_FILE ]] && cmd+=(-e "@$EXTRA_VARS_FILE")
 
-echo "==> site=$SITE host=$hostname_value repo=$REPO_DIR"
+echo "==> site=$SITE mode=$MODE host=$hostname_value repo=$REPO_DIR"
 echo "==> ${cmd[*]}"
 cd "$REPO_DIR/ansible"
 export ANSIBLE_CONFIG="$REPO_DIR/ansible/ansible.cfg"

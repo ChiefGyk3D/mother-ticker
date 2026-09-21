@@ -64,13 +64,22 @@ warning. On the malware net there is nothing else, so `local stratum 10
 orphan` keeps the unit answering from its free-running clock, and the stratum
 tells clients how much to trust it. Both are visible in the metrics.
 
-## The site flag
+## The site and mode flags
 
-`mother_ticker_site` is a host variable. In the role it selects the defaults
-for metrics mode and the overlay, and templates read it directly for chrony's
-orphan mode and the apt timers. In the Python code it is carried in
-`config.toml` and only decides which metrics writer runs. Nothing else
-branches on it, which is what keeps the two units one codebase.
+`mother_ticker_site` is a host variable that selects the metrics mode and,
+in the templates, chrony's orphan mode and the allow lists. In the Python
+code it is carried in `config.toml` and only decides which metrics writer
+runs. `mother_ticker_mode` is the other axis: `appliance` (default) turns
+on the read-only overlay, masks the apt timers, makes the journal volatile,
+removes the TUI's shell escape and lets the health ladder reboot; `dev`
+relaxes all of that for a bench unit. Each of those is its own variable
+with a default that follows the mode. Nothing else branches on either flag,
+which is what keeps the units one codebase.
+
+A unit is a standalone time clock. After the bench it may be reachable only
+from its own segment, so the role leaves it self-sufficient whichever path
+deployed it: the checkout under `/opt/mother-ticker/repo`, the on-box
+installer, and an install config rendered from the deployed values.
 
 ## The application
 

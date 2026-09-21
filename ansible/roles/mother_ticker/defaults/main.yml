@@ -1,9 +1,18 @@
 ---
 # Every tunable of the role. Per-site values are overridden in host_vars.
 
-# Which unit this is: main-lan or malware-net.
+# Which unit this is: main-lan or malware-net. Decides networks, metrics
+# path and chrony sources; nothing else.
 mother_ticker_site: main-lan
 mother_ticker_hostname: "{{ inventory_hostname }}"
+
+# How the unit is run: appliance (default) or dev. A unit is a standalone
+# time clock that may be unreachable once it leaves the bench, so appliance
+# is the recommended default on both sites: read-only overlay, apt timers
+# masked, volatile journal, no shell escape from the TUI, the health ladder
+# may reboot. dev relaxes all of that so a bench unit is easy to tinker with.
+# Every one of those is also its own variable below, for mixing.
+mother_ticker_mode: appliance
 
 # Accounts. The admin user must already exist (Raspberry Pi Imager creates it).
 # mother_ticker_admin_user: set in inventory, asserted at run time.
@@ -70,16 +79,18 @@ mother_ticker_syslog_interval_s: 15
 mother_ticker_health_restart_after: 4      # consecutive 30 s ticks
 mother_ticker_health_reboot_after: 40
 mother_ticker_health_min_uptime_s: 1800
-mother_ticker_health_reboot_enabled: true
+mother_ticker_health_reboot_enabled: "{{ mother_ticker_mode == 'appliance' }}"
 
 # TUI.
 mother_ticker_console_tui: true            # run the TUI on tty1
-mother_ticker_tui_allow_shell: true
+mother_ticker_tui_allow_shell: "{{ mother_ticker_mode == 'dev' }}"
 mother_ticker_console_fontsize: "8x16"     # 100x30 cells on the 800x480 panel
 
-# Read-only root (raspi-config overlayfs). Follows the site unless overridden.
-mother_ticker_overlay: "{{ mother_ticker_site == 'malware-net' }}"
+# Read-only root (raspi-config overlayfs). Follows the mode unless overridden.
+mother_ticker_overlay: "{{ mother_ticker_mode == 'appliance' }}"
 mother_ticker_force_on_overlay: false      # re-run the role on an overlay root anyway
+# Unattended apt activity is pointless on an overlay and unwanted on an appliance.
+mother_ticker_mask_apt_timers: "{{ mother_ticker_mode == 'appliance' }}"
 
 # Packages. `mother_ticker_offline: true` skips every apt task and expects the
 # packages to be present already (the pre-staged unit).

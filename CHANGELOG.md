@@ -6,6 +6,19 @@ follows [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+
+- A `mode` flag (`appliance`, the default, or `dev`) now decides the
+  read-only overlay, apt timer masking, journal storage, the TUI's shell
+  escape and whether the health ladder may reboot; `site` decides only
+  networks, metrics path and chrony sources. Appliance is the default on
+  both sites, so a main-LAN unit gets the overlay too unless it is set to
+  `dev`.
+- The role writes `/etc/mother-ticker/install.conf` from the values it was
+  deployed with (never overwriting one that exists), so a unit deployed from
+  a controller can later run `mother-ticker-install` on its own.
+- The About screen's belly emblem is the swirl with the anarchy A.
+
 ## [0.1.0] - 2026-09-21
 
 First cut, **alpha**: tested in CI against recorded gpsd and chrony output and

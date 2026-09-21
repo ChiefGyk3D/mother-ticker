@@ -13,9 +13,12 @@ for a plausible boot time, a status TUI on the unit's own 7 inch screen and
 over SSH, metrics export that fits the network each unit lives on, and a host
 hardened like something other machines trust for time.
 
-Two units, one codebase. A single `site` flag (`main-lan` or `malware-net`)
-decides the handful of things that differ: who may query, where metrics go,
-whether the root filesystem is a read-only overlay.
+Two units, one codebase. A `site` flag (`main-lan` or `malware-net`) decides
+who may query, where metrics go and what chrony falls back to. A `mode` flag
+(`appliance`, the default, or `dev`) decides how locked down the unit is.
+Each unit is a standalone time clock: once it leaves the bench it may be
+reachable only from its own segment, so it carries everything it needs to be
+re-provisioned from its own shell, whichever way it was first deployed.
 
 **Status: 0.1.0 alpha.** Everything here is tested in CI against recorded gpsd
 and chrony output and rendered headless. It has not yet run on the target
@@ -183,6 +186,33 @@ A fresh receiver takes minutes to a first fix and chrony needs a few more to
 trust PPS, so the status at the end of a first run is usually a warning. Watch
 the TUI or re-run `-t verify` later. `RUNBOOK.md` names every state.
 
+## Appliance or dev
+
+`mother_ticker_mode` (Ansible) or `MODE` (`install.conf`) is `appliance` by
+default on both sites. That is the recommended way to run a unit that leaves
+the bench:
+
+| | `appliance` (default) | `dev` |
+|---|---|---|
+| Root filesystem | read-only overlay; updates through maintenance mode | read-write |
+| apt timers | masked | as shipped |
+| Journal | volatile | persistent, capped |
+| TUI shell escape | off (admin SSH still gives a shell) | on |
+| Health ladder | restarts and reboots | restarts only |
+
+Use `dev` on the bench while you tinker, then switch back before the unit goes
+into service: change the one value and re-run the installer or the play. Each
+row is also its own variable (`mother_ticker_overlay`, `mother_ticker_mask_apt_timers`,
+`mother_ticker_tui_allow_shell`, `mother_ticker_health_reboot_enabled`) if you
+want to mix.
+
+Whichever path deployed a unit, the role leaves the checkout at
+`/opt/mother-ticker/repo`, installs `mother-ticker-install`, and writes
+`/etc/mother-ticker/install.conf` from the values it was deployed with (never
+overwriting an existing one). So a unit deployed from a controller can later
+be re-provisioned, or switched between modes, from its own shell with no
+controller in reach.
+
 ## Per-site deployment
 
 The isolated unit has no internet, so it is **built on a network that has
@@ -195,7 +225,8 @@ some** and moved afterwards:
    malware net (its subnets, the relay, orphan mode, no upstream servers) and
    ends by enabling the read-only overlay.
 3. Power down, move it to the malware net, power up. Nothing on it needs the
-   internet from then on.
+   internet from then on, and nothing needs the controller: the unit carries
+   its own installer and config.
 
 Everything site-specific comes from the site flag or host_vars:
 
@@ -204,9 +235,7 @@ Everything site-specific comes from the site flag or host_vars:
 | chrony sources | PPS, plus two public servers as fallback | PPS only, `local stratum 10 orphan` if GPS is lost |
 | `allow` and nftables | main LAN subnets | malware net subnet |
 | Metrics | Prometheus `/metrics` on 9101, nftables-limited to the scraper | RFC 5424 syslog, JSON body, TCP or UDP, to the relay |
-| Root filesystem | read-write | read-only overlay (`raspi-config`) |
-| apt timers | as shipped | masked |
-| Journal | persistent, capped | volatile |
+| Root filesystem, apt timers, journal, shell escape | by `mode` (appliance on both by default) | by `mode` |
 
 Re-running against the isolated unit later needs maintenance mode first
 (overlay off); from the unit itself that is `sudo mother-ticker-install`, from

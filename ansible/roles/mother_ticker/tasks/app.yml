@@ -97,6 +97,13 @@
     dest: /usr/local/sbin/mother-ticker-install
     mode: "0755"
 
+- name: Record the effective install config for the on-box installer (never overwrites)
+  ansible.builtin.template:
+    src: install.conf.j2
+    dest: /etc/mother-ticker/install.conf
+    mode: "0644"
+    force: false
+
 - name: Install systemd units
   ansible.builtin.template:
     src: "{{ item }}.j2"

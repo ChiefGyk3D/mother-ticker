@@ -1,0 +1,24 @@
+# Written by the Mother Ticker role from the values it was deployed with, so
+# `sudo mother-ticker-install` works on this unit without a controller.
+# Edit and re-run; the role never overwrites this file once it exists.
+SITE={{ mother_ticker_site }}
+MODE={{ mother_ticker_mode }}
+ADMIN_USER={{ mother_ticker_admin_user }}
+HOSTNAME={{ mother_ticker_hostname }}
+NTP_ALLOW="{{ mother_ticker_ntp_allow | join(' ') }}"
+MGMT_ALLOW="{{ mother_ticker_mgmt_allow | join(' ') }}"
+METRICS_ALLOW="{{ mother_ticker_metrics_allow | join(' ') }}"
+METRICS_PORT={{ mother_ticker_metrics_port }}
+UPSTREAM_NTP="{{ mother_ticker_upstream_ntp | join(' ') }}"
+RELAY_HOST={{ mother_ticker_syslog_host }}
+RELAY_PORT={{ mother_ticker_syslog_port }}
+RELAY_TRANSPORT={{ mother_ticker_syslog_transport }}
+RELAY_FRAMING={{ mother_ticker_syslog_framing }}
+ORPHAN_STRATUM={{ mother_ticker_orphan_stratum }}
+OVERLAY={{ 'yes' if mother_ticker_overlay | bool else 'no' }}
+NMEA_OFFSET={{ mother_ticker_nmea_offset }}
+NTS={{ 'yes' if mother_ticker_nts_enabled | bool else 'no' }}
+OFFLINE={{ 'yes' if mother_ticker_offline | bool else 'no' }}
+WHEELHOUSE=
+EXTRA_VARS_FILE=
+REPO_DIR={{ mother_ticker_install_dir }}/repo

@@ -6,8 +6,14 @@
 # Anything not listed here keeps the role default; put further Ansible
 # variables in a YAML file and point EXTRA_VARS_FILE at it.
 
-# main-lan or malware-net
+# main-lan or malware-net: networks, metrics path, chrony sources.
 SITE=main-lan
+
+# appliance (default) or dev. Appliance is the recommended way to run a unit
+# that leaves the bench: read-only overlay root, apt timers masked, no shell
+# escape from the TUI, the health ladder may reboot. dev relaxes all of that
+# for tinkering; switch back to appliance before the unit goes into service.
+MODE=appliance
 
 # The account Raspberry Pi Imager created. Keeps a normal shell and full sudo.
 ADMIN_USER=admin
@@ -37,7 +43,7 @@ RELAY_FRAMING=newline      # newline or octet-counted (TCP only)
 # malware-net: keep serving from the free-running clock if GPS is lost. 0 disables.
 ORPHAN_STRATUM=0
 
-# Read-only overlay root: auto (yes on malware-net, no on main-lan), yes, or no.
+# Read-only overlay root: auto (follows MODE), yes, or no.
 OVERLAY=auto
 
 # Measured per unit after first lock; see RUNBOOK.md.
