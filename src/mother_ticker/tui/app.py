@@ -46,6 +46,7 @@ class MotherTickerApp(App[None]):
         "network": screens.NetworkScreen,
         "system": screens.SystemScreen,
         "maint": screens.MaintenanceScreen,
+        "about": screens.AboutScreen,
     }
 
     def __init__(

@@ -9,6 +9,7 @@ from collections.abc import Callable, Coroutine
 from dataclasses import replace
 from typing import Any
 
+import pytest
 from textual.pilot import Pilot
 from textual.widgets import DataTable, Log, OptionList, Static
 
@@ -18,10 +19,14 @@ from mother_ticker.collectors.model import (
     PpsStatus,
     Snapshot,
 )
-from mother_ticker.config import Config, TuiConfig
+from mother_ticker.config import Config, Thresholds, TuiConfig
+from mother_ticker.health.evaluate import Level, evaluate
 from mother_ticker.tui import screens
 from mother_ticker.tui.app import MotherTickerApp
+from mother_ticker.tui.art import LOGO, render_big
+from mother_ticker.tui.demo import DemoApp, demo_snapshot
 from mother_ticker.tui.format import bytes_text, duration_text, offset_text
+from mother_ticker.tui.widgets import LIT, BigClock, IconPanel
 from tests.conftest import make_snapshot
 
 CONFIG = Config(tui=TuiConfig(refresh_s=0.05, network_refresh_s=1.0))
@@ -76,7 +81,7 @@ def run(app: FakeApp, scenario: Callable[[Pilot[None]], Coroutine[Any, Any, None
     asyncio.run(_go())
 
 
-def _banner(app: FakeApp) -> Static:
+def _banner(app: MotherTickerApp) -> Static:
     return app.screen.query_one("#banner", Static)
 
 
@@ -92,8 +97,15 @@ class TestDashboard:
             footer = app.screen.query_one("#footer-right", Static)
             assert "v0.1.0" in str(footer.render())
             assert "site main-lan" in str(footer.render())
-            gnss = app.screen.query_one("#panel-gnss", Static)
-            assert "3D fix" in str(gnss.render())
+            gnss = app.screen.query_one("#panel-gnss", IconPanel)
+            assert "3D fix" in str(gnss.query_one(".panel-text", Static).render())
+            assert "|##|=" in str(gnss.query_one(".panel-icon", Static).render())
+            clock = app.screen.query_one("#clock", BigClock).render()
+            plain = str(clock)
+            assert plain.count("\n") == 4
+            assert LIT not in plain and "#" not in plain  # lit cells are coloured spaces
+            spans = getattr(clock, "spans", [])
+            assert spans and all(span.style.background is not None for span in spans)
 
         run(app, scenario)
 
@@ -105,7 +117,7 @@ class TestDashboard:
             banner = _banner(app)
             assert banner.has_class("critical")
             assert "PPS not pulsing" in str(banner.render())
-            assert app.screen.query_one("#panel-pps", Static).has_class("critical")
+            assert app.screen.query_one("#panel-pps", IconPanel).has_class("critical")
             states = set()
             for _ in range(6):
                 states.add(banner.has_class("flash"))
@@ -269,6 +281,84 @@ class TestMenuAndDetails:
             assert "shell" not in ids
 
         run(app, scenario)
+
+
+class TestAboutAndArt:
+    def test_about_screen_names_the_author(self) -> None:
+        app = FakeApp(make_snapshot())
+
+        async def scenario(pilot: Pilot[None]) -> None:
+            await pilot.press("space")
+            await pilot.pause(0.1)
+            menu = app.screen.query_one("#menu", OptionList)
+            menu.highlighted = next(
+                i for i in range(menu.option_count) if menu.get_option_at_index(i).id == "about"
+            )
+            await pilot.press("enter")
+            await pilot.pause(0.2)
+            assert isinstance(app.screen, screens.AboutScreen)
+            text = str(app.screen.query_one("#about-text", Static).render())
+            assert "ChiefGyk3D" in text
+            assert "Renegade Penguin LLC" in text
+            assert "0.1.0" in text
+            assert "(-A-)" in str(app.screen.query_one("#about-logo", Static).render())
+
+        run(app, scenario)
+
+    def test_logo_is_plain_ascii_and_fits(self) -> None:
+        lines = LOGO.splitlines()
+        assert all(ord(c) < 128 for line in lines for c in line)
+        assert max(len(line) for line in lines) <= 48
+        assert len(lines) <= 16
+
+    def test_render_big(self) -> None:
+        out = render_big("10:5", "#")
+        rows = out.split("\n")
+        assert len(rows) == 5
+        assert len({len(r) for r in rows}) == 1  # equal widths, or centring tears the digits
+        assert rows[4].startswith("##### #####")  # 1 has a full base, 0 has a full base
+        assert rows[1].split()[2] == "#"  # the colon's upper dot
+        ascii_out = render_big("8", "#")
+        assert ascii_out.split("\n")[0] == "#####"
+
+    def test_ascii_only_clock(self) -> None:
+        cfg = replace(CONFIG, tui=replace(CONFIG.tui, ascii_only=True))
+        app = FakeApp(make_snapshot(), cfg)
+
+        async def scenario(pilot: Pilot[None]) -> None:
+            clock = str(app.screen.query_one("#clock", BigClock).render())
+            assert "#" in clock and LIT not in clock
+
+        run(app, scenario)
+
+
+class TestDemo:
+    @pytest.mark.parametrize("state", ["nominal", "warning", "critical"])
+    def test_demo_snapshot_states(self, state: str) -> None:
+        snap = demo_snapshot(state)  # type: ignore[arg-type]
+        level = evaluate(snap, Thresholds()).level
+        assert (
+            level
+            == {"nominal": Level.OK, "warning": Level.WARNING, "critical": Level.CRITICAL}[state]
+        )
+
+    def test_demo_app_runs_and_actions_are_harmless(self) -> None:
+        app = DemoApp(CONFIG, "nominal")
+
+        async def scenario(pilot: Pilot[None]) -> None:
+            assert isinstance(app.screen, screens.DashboardScreen)
+            assert "NOMINAL" in str(_banner(app).render())
+            ok, msg = app.restart_service("gpsd")
+            assert ok and msg.startswith("demo:")
+            assert "PPS" in app.collect_chrony_text().sources_text
+            assert "chrony" in app.journal_tail("chrony")
+
+        async def go() -> None:
+            async with app.run_test(size=(100, 30)) as pilot:
+                await pilot.pause(0.4)
+                await scenario(pilot)
+
+        asyncio.run(go())
 
 
 class TestFormatters:

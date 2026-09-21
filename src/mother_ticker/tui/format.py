@@ -45,7 +45,7 @@ def bytes_text(value: float) -> str:
 def gnss_summary(gnss: GnssStatus) -> str:
     if not gnss.reachable:
         return "gpsd UNREACHABLE"
-    return f"{gnss.fix_label}, {gnss.satellites_used} used of {gnss.satellites_seen} seen"
+    return f"{gnss.fix_label}, {gnss.satellites_used}/{gnss.satellites_seen} satellites"
 
 
 def pps_summary(pps: PpsStatus) -> str:
@@ -53,8 +53,8 @@ def pps_summary(pps: PpsStatus) -> str:
         return "device MISSING"
     if pps.error:
         return f"unreadable: {pps.error}"
-    age = f"{pps.age_s:.1f}s ago" if pps.age_s is not None else "age unknown"
-    return f"{'pulsing' if pps.pulsing else 'NO PULSE'}, last edge {age}"
+    age = f"{pps.age_s:.1f} s ago" if pps.age_s is not None else "age unknown"
+    return f"{'pulsing' if pps.pulsing else 'NO PULSE'}\nlast edge {age}"
 
 
 def chrony_summary(tracking: ChronyTracking) -> str:
@@ -64,7 +64,8 @@ def chrony_summary(tracking: ChronyTracking) -> str:
         return "NOT SYNCHRONISED"
     return (
         f"stratum {tracking.stratum} via {tracking.ref_name or tracking.ref_id}\n"
-        f"offset {offset_text(tracking.system_time_offset_s)}, leap {tracking.leap_status}"
+        f"offset {offset_text(tracking.system_time_offset_s)}\n"
+        f"leap {tracking.leap_status}"
     )
 
 

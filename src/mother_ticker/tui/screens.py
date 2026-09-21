@@ -12,11 +12,12 @@ from textual.app import ComposeResult
 from textual.binding import Binding, BindingType
 from textual.containers import Grid, Horizontal, Vertical, VerticalScroll
 from textual.screen import ModalScreen, Screen
-from textual.widgets import Button, DataTable, Digits, Label, Log, OptionList, Static
+from textual.widgets import Button, DataTable, Label, Log, OptionList, Static
 from textual.widgets.option_list import Option
 
 from mother_ticker.collectors.model import Snapshot
 from mother_ticker.health.evaluate import HealthReport, Level
+from mother_ticker.tui import art
 from mother_ticker.tui.format import (
     chrony_summary,
     gnss_summary,
@@ -25,6 +26,8 @@ from mother_ticker.tui.format import (
     system_lines,
 )
 from mother_ticker.tui.messages import SnapshotUpdated
+from mother_ticker.tui.widgets import BigClock, IconPanel
+from mother_ticker.version import __version__
 
 if TYPE_CHECKING:
     from mother_ticker.tui.app import MotherTickerApp
@@ -63,18 +66,23 @@ class DashboardScreen(Screen[None]):
 
     def compose(self) -> ComposeResult:
         yield Static("STARTING", id="banner")
-        yield Digits("--:--:--", id="clock")
+        yield BigClock(ascii_only=self.mt_app.config.tui.ascii_only, id="clock")
         yield Static("", id="clock-sub")
         with Grid(id="panels"):
-            yield Static("GNSS\nwaiting for data", classes="panel", id="panel-gnss")
-            yield Static("CHRONY\nwaiting for data", classes="panel", id="panel-chrony")
-            yield Static("PPS\nwaiting for data", classes="panel", id="panel-pps")
-            yield Static("NETWORK\nwaiting for data", classes="panel", id="panel-net")
+            yield IconPanel("GNSS", art.SATELLITE, id="panel-gnss")
+            yield IconPanel("CHRONY", art.CLOCK, id="panel-chrony")
+            yield IconPanel("PPS", art.PULSE, id="panel-pps")
+            yield IconPanel("NETWORK", art.NETWORK, id="panel-net")
         with Horizontal(id="dash-footer"):
-            yield Static("press any key for the menu", id="footer-left")
+            yield Static("MOTHER TICKER    press any key for the menu", id="footer-left")
             yield Static("", classes="version", id="footer-right")
 
+    @property
+    def mt_app(self) -> MotherTickerApp:
+        return self.app  # type: ignore[return-value]
+
     def on_mount(self) -> None:
+        self._tick_clock()
         self.set_interval(0.5, self._flash)
         self.set_interval(0.25, self._tick_clock)
         app = self.app
@@ -93,7 +101,7 @@ class DashboardScreen(Screen[None]):
     def _tick_clock(self) -> None:
         now = datetime.now().astimezone()
         utc = datetime.now(tz=UTC)
-        self.query_one("#clock", Digits).update(utc.strftime("%H:%M:%S"))
+        self.query_one("#clock", BigClock).set_time(utc.strftime("%H:%M:%S"))
         self.query_one("#clock-sub", Static).update(
             f"{utc.strftime('%Y-%m-%d')} UTC    local {now.strftime('%H:%M:%S %Z')}"
         )
@@ -121,31 +129,29 @@ class DashboardScreen(Screen[None]):
             banner.update(report.headline)
 
         def panel(pid: str, subsystem: str, text: str) -> None:
-            widget = self.query_one(pid, Static)
-            widget.remove_class("warning", "critical")
+            widget = self.query_one(pid, IconPanel)
             level = report.by_subsystem(subsystem)
-            if level is Level.CRITICAL:
-                widget.add_class("critical")
-            elif level is Level.WARNING:
-                widget.add_class("warning")
-            widget.update(text)
+            widget.set_level(
+                "critical"
+                if level is Level.CRITICAL
+                else "warning"
+                if level is Level.WARNING
+                else ""
+            )
+            widget.set_text(text)
 
         t = snap.chrony.tracking
-        panel("#panel-gnss", "gnss", "GNSS\n" + gnss_summary(snap.gnss))
+        panel("#panel-gnss", "gnss", gnss_summary(snap.gnss))
         panel(
             "#panel-chrony",
             "chrony",
-            "CHRONY\n"
-            + chrony_summary(t)
-            + (f"\nrms {offset_text(t.rms_offset_s)}" if t.reachable else ""),
+            chrony_summary(t) + (f", rms {offset_text(t.rms_offset_s)}" if t.reachable else ""),
         )
-        panel("#panel-pps", "pps", "PPS\n" + pps_summary(snap.pps))
+        panel("#panel-pps", "pps", pps_summary(snap.pps))
         addrs = snap.network.primary_addresses()
-        panel(
-            "#panel-net", "network", "NETWORK\n" + ("\n".join(addrs[:3]) if addrs else "no address")
-        )
+        panel("#panel-net", "network", "\n".join(addrs[:3]) if addrs else "no address")
         self.query_one("#footer-right", Static).update(
-            f"{snap.system.hostname}  site {snap.site}  v{snap.version}"
+            f"{snap.system.hostname}    site {snap.site}    v{snap.version}"
         )
 
 
@@ -161,6 +167,7 @@ class MenuScreen(_Base):
             Option("Network: interfaces and addresses", id="network"),
             Option("System: uptime, temperature, memory, disk", id="system"),
             Option("Maintenance: reboot, read-only overlay", id="maint"),
+            Option("About Mother Ticker", id="about"),
         ]
         if self.mt_app.config.tui.allow_shell:
             options.append(Option("Drop to a shell (exits the TUI)", id="shell"))
@@ -464,6 +471,37 @@ class MaintenanceScreen(_Base):
         if yes:
             ok, message = self.mt_app.maintenance_mode(enable)
             self.app.notify(message, severity="information" if ok else "error", timeout=8)
+
+
+class AboutScreen(_Base):
+    title_text = "About"
+
+    def compose(self) -> ComposeResult:
+        yield self._title()
+        yield Static(art.TITLE, id="about-title", markup=False)
+        yield Static("Go sync with that NTP Mother Ticker.", id="about-tagline", markup=False)
+        with Horizontal(id="about-body"):
+            yield Static(art.LOGO, id="about-logo", markup=False)
+            yield Static(self._text(), id="about-text", markup=False)
+        yield self._hint()
+
+    def _text(self) -> str:
+        cfg = self.mt_app.config
+        return "\n".join(
+            [
+                f"version {__version__}    site {cfg.site}",
+                "",
+                "GPS-disciplined stratum-1 NTP appliance",
+                "chrony + gpsd + kernel PPS + RV-3028 RTC",
+                "",
+                "by ChiefGyk3D",
+                "Renegade Penguin LLC",
+                "AGPL-3.0-or-later",
+                "",
+                "github.com/ChiefGyk3D/mother-ticker",
+                "support.chiefgyk3d.com",
+            ]
+        )
 
 
 class ConfirmScreen(ModalScreen[bool]):

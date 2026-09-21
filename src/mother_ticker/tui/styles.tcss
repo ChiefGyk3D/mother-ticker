@@ -32,9 +32,11 @@ Screen {
 
 #clock {
     width: 100%;
+    height: 5;
     content-align: center middle;
     text-align: center;
     margin-top: 1;
+    color: ansi_bright_cyan;
 }
 #clock-sub {
     width: 100%;
@@ -49,17 +51,60 @@ Screen {
     grid-gutter: 1 2;
 }
 .panel {
-    height: auto;
-    border: round ansi_bright_black;
-    padding: 0 1;
+    height: 7;
+    border: solid ansi_bright_black;
+    padding: 0 0 0 1;
+}
+.panel-icon {
+    width: 17;
+    height: 5;
+    color: ansi_bright_cyan;
+}
+.panel-text {
+    width: 1fr;
+    height: 5;
+    padding-left: 1;
 }
 .panel.warning {
-    border: round ansi_yellow;
+    border: solid ansi_yellow;
+}
+.panel.warning .panel-icon {
+    color: ansi_yellow;
 }
 .panel.critical {
-    border: round ansi_red;
+    border: solid ansi_red;
     color: ansi_red;
     text-style: bold;
+}
+.panel.critical .panel-icon {
+    color: ansi_red;
+}
+
+#about-title {
+    width: 100%;
+    height: 4;
+    text-align: center;
+    margin-top: 1;
+    color: ansi_bright_cyan;
+    text-style: bold;
+}
+#about-tagline {
+    width: 100%;
+    text-align: center;
+    color: ansi_bright_black;
+}
+#about-body {
+    height: 1fr;
+    padding: 1 2;
+}
+#about-logo {
+    width: 50;
+    height: 15;
+    color: ansi_bright_cyan;
+}
+#about-text {
+    width: 1fr;
+    padding: 1 0 0 2;
 }
 
 #dash-footer {

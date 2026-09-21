@@ -19,9 +19,13 @@ import socket
 import sys
 import threading
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from mother_ticker.config import Config, ConfigError, load_config
 from mother_ticker.version import __version__
+
+if TYPE_CHECKING:
+    from mother_ticker.tui.app import MotherTickerApp
 
 EXIT_SHELL = 10  # the login wrapper execs a shell when the TUI exits with this
 
@@ -43,10 +47,15 @@ def _config(args: argparse.Namespace) -> Config:
 
 
 def cmd_tui(args: argparse.Namespace) -> int:
-    from mother_ticker.tui.app import MotherTickerApp
-
     config = _config(args)
-    app = MotherTickerApp(config)
+    if args.demo:
+        from mother_ticker.tui.demo import DemoApp
+
+        app: MotherTickerApp = DemoApp(config, args.demo)
+    else:
+        from mother_ticker.tui.app import MotherTickerApp
+
+        app = MotherTickerApp(config)
     app.run()
     return EXIT_SHELL if app.exit_to_shell else 0
 
@@ -176,7 +185,15 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("-v", "--verbose", action="store_true", help="debug logging to stderr")
     sub = parser.add_subparsers(dest="command")
-    sub.add_parser("tui", help="dashboard and menu (default)").set_defaults(func=cmd_tui)
+    tui = sub.add_parser("tui", help="dashboard and menu (default)")
+    tui.add_argument(
+        "--demo",
+        nargs="?",
+        const="nominal",
+        choices=["nominal", "warning", "critical"],
+        help="run with fabricated data (no gpsd, chronyd or hardware); optional state",
+    )
+    tui.set_defaults(func=cmd_tui)
     sub.add_parser(
         "status", help="one-shot text status; exit code is the health level"
     ).set_defaults(func=cmd_status)
@@ -197,6 +214,8 @@ def main(argv: list[str] | None = None) -> int:
     func = getattr(args, "func", cmd_tui)
     if not hasattr(args, "dry_run"):
         args.dry_run = False
+    if not hasattr(args, "demo"):
+        args.demo = None
     result: int = func(args)
     return result
 

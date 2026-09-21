@@ -96,6 +96,7 @@ class TuiConfig:
     refresh_s: float = 1.0
     network_refresh_s: float = 30.0
     allow_shell: bool = True
+    ascii_only: bool = False  # "#" instead of block glyphs for the big clock
     services: tuple[str, ...] = ("chrony", "gpsd")
 
 
@@ -201,6 +202,7 @@ def config_from_dict(data: dict[str, Any]) -> Config:
             refresh_s=float(tui_d.get("refresh_s", TuiConfig.refresh_s)),
             network_refresh_s=float(tui_d.get("network_refresh_s", TuiConfig.network_refresh_s)),
             allow_shell=bool(tui_d.get("allow_shell", TuiConfig.allow_shell)),
+            ascii_only=bool(tui_d.get("ascii_only", TuiConfig.ascii_only)),
             services=tuple(str(s) for s in tui_d.get("services", list(TuiConfig.services))),
         ),
     )
