@@ -148,6 +148,14 @@ The release workflow refuses a tag whose version does not match `version.py`
 or has no CHANGELOG section, builds the sdist and wheel, and creates the
 GitHub release with the CHANGELOG section as its notes.
 
+`release.sh` handles the CHANGELOG four ways: a version with no section and
+entries under Unreleased is rolled into a new dated section (the normal
+case); a section written by hand with nothing under Unreleased is tagged as
+is (the first release); both at once is refused until you fold them into
+one; neither is refused because there is nothing to release. Between
+releases, every PR adds its line under Unreleased; that is all "keeping
+going" takes.
+
 Action pins in the workflows are commit SHAs with the version in a comment.
 Resolve a new pin with `git ls-remote --tags https://github.com/<owner>/<repo>`;
 never from memory.
