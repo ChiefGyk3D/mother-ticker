@@ -1,0 +1,18 @@
+---
+# Grafana dashboard provisioning. Drop this file in
+# /etc/grafana/provisioning/dashboards/ and the dashboard JSON in the path
+# below (or change the path); Grafana loads it at start and re-reads it every
+# updateIntervalSeconds. The datasource is chosen from the dashboard's own
+# "Prometheus" variable, so nothing here names one.
+apiVersion: 1
+providers:
+  - name: mother-ticker
+    orgId: 1
+    folder: Mother Ticker
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 60
+    allowUiUpdates: false
+    options:
+      path: /var/lib/grafana/dashboards/mother-ticker
+      foldersFromFilesStructure: false

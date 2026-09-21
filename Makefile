@@ -3,7 +3,7 @@ PY ?= python3
 VENV ?= .venv
 BIN := $(VENV)/bin
 
-.PHONY: venv check lint type test security yaml ansible shell hygiene format clean screenshots
+.PHONY: venv check lint type test security yaml ansible shell hygiene format clean screenshots grafana
 
 venv:
 	$(PY) -m venv $(VENV)
@@ -47,3 +47,7 @@ clean:
 # Screenshots for the README come from the demo app, never by hand.
 screenshots:
 	$(BIN)/python scripts/render_screenshots.py docs/images
+
+# The Grafana dashboard JSON is generated; edit the generator, then run this.
+grafana:
+	$(BIN)/python scripts/gen_grafana_dashboard.py

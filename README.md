@@ -363,6 +363,9 @@ important ones:
     - targets: ["ntp-main:9101"]
 ```
 
+`grafana/` has the alert rules, a generated dashboard and a provisioning
+file for the scraper side; `grafana/README.md` says how to load each.
+
 **malware-net**: one syslog message per interval (15 s by default) to the
 relay, RFC 5424 with a structured-data element and a JSON body. Severity
 follows the health level (informational, warning, critical), so a SIEM can
@@ -417,6 +420,7 @@ through either, and where Patch Gremlin fits.
 | `ARCHITECTURE.md` | how chrony, gpsd, PPS and the RTC relate; TUI data flow; metrics paths per site; the health ladder |
 | `RUNBOOK.md` | what a lost fix, a dead PPS and a desynchronised chrony look like, how to diagnose and recover each, and the other failure modes |
 | `docs/alerts.md` | one-way alerting: metrics, syslog, webhook to n8n or ntfy, Grafana rules, email, Patch Gremlin |
+| `grafana/README.md` | the alert rules, dashboard and provisioning file for the Prometheus and Grafana host |
 | `docs/nts.md` | enabling Network Time Security for clients that support it |
 | `docs/offline-updates.md` | pre-staging and WAN-window procedures for the isolated unit |
 | `SECURITY.md` | reporting a vulnerability, what is in scope, the hardening in place |
