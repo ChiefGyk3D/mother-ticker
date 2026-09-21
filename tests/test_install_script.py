@@ -39,6 +39,7 @@ class TestExampleConfig:
         hv = load(tmp_path)
         assert hv["ansible_connection"] == "local"
         assert hv["mother_ticker_site"] == "main-lan"
+        assert hv["mother_ticker_mode"] == "appliance"
         assert hv["mother_ticker_admin_user"] == "admin"
         assert hv["mother_ticker_ntp_allow"] == ["192.0.2.0/24"]
         assert hv["mother_ticker_upstream_ntp"] == ["time.cloudflare.com", "time.nist.gov"]
@@ -73,6 +74,11 @@ class TestExampleConfig:
         assert hv["mother_ticker_orphan_stratum"] == 10
         assert hv["mother_ticker_overlay"] is True
         assert hv["mother_ticker_nts_enabled"] is True
+
+    def test_dev_mode_flag(self, tmp_path: Path) -> None:
+        result = run("--config", str(EXAMPLE), "--mode", "dev", out=tmp_path)
+        assert result.returncode == 0, result.stderr
+        assert load(tmp_path)["mother_ticker_mode"] == "dev"
 
     def test_malware_net_without_explicit_upstream_gets_none(self, tmp_path: Path) -> None:
         """A minimal malware-net config must not inherit public servers from the default."""

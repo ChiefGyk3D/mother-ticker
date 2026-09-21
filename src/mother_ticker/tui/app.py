@@ -8,6 +8,7 @@ swap in fakes without touching Textual internals.
 
 from __future__ import annotations
 
+import subprocess
 import time
 from collections.abc import Callable
 from pathlib import Path
@@ -47,6 +48,7 @@ class MotherTickerApp(App[None]):
         "system": screens.SystemScreen,
         "maint": screens.MaintenanceScreen,
         "about": screens.AboutScreen,
+        "help": screens.HelpScreen,
     }
 
     def __init__(
@@ -92,6 +94,26 @@ class MotherTickerApp(App[None]):
         self.report = report
         for screen in self.screen_stack:
             screen.post_message(SnapshotUpdated(snapshot, report))
+
+    # Actions bound on every screen ------------------------------------------
+
+    def action_help(self) -> None:
+        if not isinstance(self.screen, screens.HelpScreen):
+            self.push_screen("help")
+
+    def action_admin_login(self) -> None:
+        """Hand the terminal to `su - <admin>`; su asks for the admin password."""
+        admin = self.config.tui.admin_user
+        if not admin:
+            self.notify("no admin user configured (tui.admin_user)", severity="warning")
+            return
+        self.notify(f"type the password for {admin}; 'exit' returns to the TUI", timeout=4)
+        self.run_admin_shell(admin)
+
+    def run_admin_shell(self, admin: str) -> int:
+        with self.suspend():
+            print(f"\nMother Ticker: admin login as {admin}. Type 'exit' to return to the TUI.\n")
+            return subprocess.call(["su", "-", admin])
 
     # System actions the screens call ----------------------------------------
 

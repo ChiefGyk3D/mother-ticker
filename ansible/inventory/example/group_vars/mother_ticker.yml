@@ -1,6 +1,12 @@
 ---
 # Shared by both units. Per-site values are in host_vars/.
 
+# appliance (default) or dev. Appliance is the recommended way to run a unit
+# that leaves the bench: read-only overlay, apt timers masked, no shell escape
+# from the TUI, the health ladder may reboot. Set dev on a bench unit while
+# you tinker, then switch it back before it goes into service.
+mother_ticker_mode: appliance
+
 # The account Raspberry Pi Imager created. It keeps a normal shell and full sudo.
 ansible_user: admin
 mother_ticker_admin_user: admin

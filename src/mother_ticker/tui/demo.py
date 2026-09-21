@@ -27,6 +27,7 @@ from mother_ticker.collectors.model import (
     Snapshot,
     SystemStatus,
 )
+from mother_ticker.collectors.updates import UpdatesStatus
 from mother_ticker.config import Config
 from mother_ticker.tui.app import MotherTickerApp
 from mother_ticker.version import __version__
@@ -182,6 +183,13 @@ def demo_snapshot(state: DemoState = "nominal") -> Snapshot:
         ServiceStatus("chrony", "active", "running", 0, "Tue 2026-09-15 07:43:02 UTC"),
         ServiceStatus("gpsd", "active", "running", 0, "Tue 2026-09-15 07:43:01 UTC"),
     )
+    updates = UpdatesStatus(
+        checked_at=datetime.now(tz=UTC).timestamp() - 3 * 3600,
+        pending=0,
+        security=0,
+        lists_refreshed=True,
+        lists_age_s=3 * 3600.0,
+    )
     if state == "warning":
         tracking = replace(
             tracking,
@@ -191,6 +199,13 @@ def demo_snapshot(state: DemoState = "nominal") -> Snapshot:
             system_time_offset_s=-1.2e-4,
         )
         system = replace(system, temperature_c=71.5)
+        updates = replace(
+            updates,
+            pending=7,
+            security=2,
+            packages=("chrony", "gpsd", "libc6", "openssh-server", "systemd", "tzdata", "vim-tiny"),
+            security_packages=("libc6", "openssh-server"),
+        )
     elif state == "critical":
         pps = PpsStatus(
             present=True,
@@ -224,6 +239,7 @@ def demo_snapshot(state: DemoState = "nominal") -> Snapshot:
         system=system,
         network=network,
         services=services,
+        updates=updates,
     )
 
 
@@ -232,6 +248,8 @@ class DemoApp(MotherTickerApp):
 
     def __init__(self, config: Config, state: DemoState = "nominal") -> None:
         self.state: DemoState = state
+        if not config.tui.admin_user:
+            config = replace(config, tui=replace(config.tui, admin_user="admin"))
         super().__init__(
             config,
             collector=lambda _cfg, _net: demo_snapshot(self.state),
@@ -252,3 +270,7 @@ class DemoApp(MotherTickerApp):
 
     def maintenance_mode(self, enable: bool) -> tuple[bool, str]:
         return True, f"demo: would turn maintenance mode {'on' if enable else 'off'}"
+
+    def run_admin_shell(self, admin: str) -> int:
+        self.notify(f"demo: would run su - {admin}")
+        return 0

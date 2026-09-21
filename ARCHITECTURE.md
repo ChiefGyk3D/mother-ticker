@@ -64,13 +64,22 @@ warning. On the malware net there is nothing else, so `local stratum 10
 orphan` keeps the unit answering from its free-running clock, and the stratum
 tells clients how much to trust it. Both are visible in the metrics.
 
-## The site flag
+## The site and mode flags
 
-`mother_ticker_site` is a host variable. In the role it selects the defaults
-for metrics mode and the overlay, and templates read it directly for chrony's
-orphan mode and the apt timers. In the Python code it is carried in
-`config.toml` and only decides which metrics writer runs. Nothing else
-branches on it, which is what keeps the two units one codebase.
+`mother_ticker_site` is a host variable that selects the metrics mode and,
+in the templates, chrony's orphan mode and the allow lists. In the Python
+code it is carried in `config.toml` and only decides which metrics writer
+runs. `mother_ticker_mode` is the other axis: `appliance` (default) turns
+on the read-only overlay, masks the apt timers, makes the journal volatile,
+removes the TUI's shell escape and lets the health ladder reboot; `dev`
+relaxes all of that for a bench unit. Each of those is its own variable
+with a default that follows the mode. Nothing else branches on either flag,
+which is what keeps the units one codebase.
+
+A unit is a standalone time clock. After the bench it may be reachable only
+from its own segment, so the role leaves it self-sufficient whichever path
+deployed it: the checkout under `/opt/mother-ticker/repo`, the on-box
+installer, and an install config rendered from the deployed values.
 
 ## The application
 
@@ -129,6 +138,28 @@ The isolated unit never opens a metrics port and never talks to the
 production monitoring stack. It writes to the same relay the segment already
 uses for logs, in the format that relay expects, and that is the only
 outbound path the exporter has.
+
+## Updates and alerts
+
+`mother-ticker-updates.timer` runs `check-updates` daily as root: refresh the
+apt lists where the network allows, simulate a dist-upgrade, count what would
+install and which of those are security updates, write a state file. The
+collectors read that file into the Snapshot, so the same evaluation that
+drives the banner also raises a warning for pending security updates or a
+required reboot, the metrics carry the counts, and the syslog message carries
+them to the relay. Nothing is installed by this path.
+
+The exporter also owns the optional webhook: after each collection it hands
+the snapshot and report to `metrics.alerts.AlertSender`, which sends one
+message when the health level crosses the configured floor in either
+direction and one when a new security update appears. The payload is plain
+JSON or ntfy's publish shape; a bearer token comes from a file at send time.
+`docs/alerts.md` covers the receiving side.
+
+**Admin login.** Ctrl+A on any screen suspends the TUI and runs `su - <admin>`
+on the same terminal; `su` asks for the admin password. That gives a debugging
+shell on a locked-down unit with a keyboard alone, and over SSH from the TUI
+user, without the TUI itself holding any privilege.
 
 ## The health ladder
 

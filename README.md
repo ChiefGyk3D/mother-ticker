@@ -13,9 +13,12 @@ for a plausible boot time, a status TUI on the unit's own 7 inch screen and
 over SSH, metrics export that fits the network each unit lives on, and a host
 hardened like something other machines trust for time.
 
-Two units, one codebase. A single `site` flag (`main-lan` or `malware-net`)
-decides the handful of things that differ: who may query, where metrics go,
-whether the root filesystem is a read-only overlay.
+Two units, one codebase. A `site` flag (`main-lan` or `malware-net`) decides
+who may query, where metrics go and what chrony falls back to. A `mode` flag
+(`appliance`, the default, or `dev`) decides how locked down the unit is.
+Each unit is a standalone time clock: once it leaves the bench it may be
+reachable only from its own segment, so it carries everything it needs to be
+re-provisioned from its own shell, whichever way it was first deployed.
 
 **Status: 0.1.0 alpha.** Everything here is tested in CI against recorded gpsd
 and chrony output and rendered headless. It has not yet run on the target
@@ -183,6 +186,33 @@ A fresh receiver takes minutes to a first fix and chrony needs a few more to
 trust PPS, so the status at the end of a first run is usually a warning. Watch
 the TUI or re-run `-t verify` later. `RUNBOOK.md` names every state.
 
+## Appliance or dev
+
+`mother_ticker_mode` (Ansible) or `MODE` (`install.conf`) is `appliance` by
+default on both sites. That is the recommended way to run a unit that leaves
+the bench:
+
+| | `appliance` (default) | `dev` |
+|---|---|---|
+| Root filesystem | read-only overlay; updates through maintenance mode | read-write |
+| apt timers | masked | as shipped |
+| Journal | volatile | persistent, capped |
+| TUI shell escape | off (admin login and admin SSH still give a shell) | on |
+| Health ladder | restarts and reboots | restarts and reboots |
+
+Use `dev` on the bench while you tinker, then switch back before the unit goes
+into service: change the one value and re-run the installer or the play. Each
+row is also its own variable (`mother_ticker_overlay`, `mother_ticker_mask_apt_timers`,
+`mother_ticker_tui_allow_shell`, `mother_ticker_health_reboot_enabled`) if you
+want to mix.
+
+Whichever path deployed a unit, the role leaves the checkout at
+`/opt/mother-ticker/repo`, installs `mother-ticker-install`, and writes
+`/etc/mother-ticker/install.conf` from the values it was deployed with (never
+overwriting an existing one). So a unit deployed from a controller can later
+be re-provisioned, or switched between modes, from its own shell with no
+controller in reach.
+
 ## Per-site deployment
 
 The isolated unit has no internet, so it is **built on a network that has
@@ -195,7 +225,8 @@ some** and moved afterwards:
    malware net (its subnets, the relay, orphan mode, no upstream servers) and
    ends by enabling the read-only overlay.
 3. Power down, move it to the malware net, power up. Nothing on it needs the
-   internet from then on.
+   internet from then on, and nothing needs the controller: the unit carries
+   its own installer and config.
 
 Everything site-specific comes from the site flag or host_vars:
 
@@ -204,9 +235,7 @@ Everything site-specific comes from the site flag or host_vars:
 | chrony sources | PPS, plus two public servers as fallback | PPS only, `local stratum 10 orphan` if GPS is lost |
 | `allow` and nftables | main LAN subnets | malware net subnet |
 | Metrics | Prometheus `/metrics` on 9101, nftables-limited to the scraper | RFC 5424 syslog, JSON body, TCP or UDP, to the relay |
-| Root filesystem | read-write | read-only overlay (`raspi-config`) |
-| apt timers | as shipped | masked |
-| Journal | persistent, capped | volatile |
+| Root filesystem, apt timers, journal, shell escape | by `mode` (appliance on both by default) | by `mode` |
 
 Re-running against the isolated unit later needs maintenance mode first
 (overlay off); from the unit itself that is `sudo mother-ticker-install`, from
@@ -232,6 +261,15 @@ Your admin account keeps a normal shell.
   network (every interface and address), system (uptime, load, memory, disk,
   temperature, throttling, overlay state), maintenance (reboot, overlay on or
   off), drop to a shell, back.
+- **Ctrl+A, admin login.** From any screen, or from the menu: the TUI hands
+  the terminal to `su - <admin user>`, which asks for the admin password, and
+  you have that user's shell (with sudo) for debugging. `exit` returns to the
+  TUI. Works the same with a keyboard plugged into the unit and over SSH, and
+  in both modes, because the password is the gate. Set by `tui.admin_user`,
+  which the role fills from the admin account.
+- **F1 or ?** shows every key combo on one screen. The dashboard footer lists
+  the ones that matter: any key for the menu, Ctrl+A for admin login, F1 for
+  keys, Ctrl+Q to quit.
 - **Ctrl+Q** quits the TUI outright. On tty1 systemd restarts it; over SSH the
   session ends.
 - If the TUI itself is broken: Alt+F2 on the unit gives a login prompt on tty2
@@ -323,6 +361,32 @@ alert on severity alone:
 Transport (`tcp` or `udp`) and TCP framing (`newline` or `octet-counted`) are
 host_vars. `mother_ticker_relay_send_failures` counts sends the relay refused.
 
+## Update alerts
+
+Nothing on a unit installs updates on its own; an appliance with a read-only
+root cannot, and a time source should not surprise you. Instead a daily timer
+(`mother-ticker-updates.timer`) refreshes the apt lists where it can, simulates
+a dist-upgrade, and records how many packages would install and how many of
+those are security updates. That state reaches you one way, through whatever
+the unit already has:
+
+- **Metrics** (the primary path): `mother_ticker_updates_pending`,
+  `mother_ticker_security_updates_pending`, `mother_ticker_reboot_required`,
+  `mother_ticker_updates_checked_timestamp_seconds`. Scraped by Prometheus on
+  the main LAN for Grafana alert rules; in the syslog JSON body on the malware
+  net, so the SIEM sees them too.
+- **Webhook (optional, main LAN)**: set `mother_ticker_alert_webhook_url` (or
+  `ALERT_WEBHOOK_URL`) to an ntfy server for phone push, or to an n8n webhook
+  or a Grafana webhook contact point, and the exporter posts a message when
+  the health level crosses the floor (and when it recovers) and when new
+  security updates appear.
+- **On screen, deliberately little**: the host panel says `updates available`
+  (or `reboot required`) and nothing more; the banner never turns yellow for
+  updates. The system screen has the counts for when you go looking.
+
+`docs/alerts.md` has the Grafana alert rules, the ntfy and n8n setups, email
+through either, and where Patch Gremlin fits.
+
 ## Updates
 
 - Main LAN: maintenance is ordinary `apt`. Pull a new release and re-run
@@ -338,6 +402,7 @@ host_vars. `mother_ticker_relay_send_failures` counts sends the relay refused.
 |---|---|
 | `ARCHITECTURE.md` | how chrony, gpsd, PPS and the RTC relate; TUI data flow; metrics paths per site; the health ladder |
 | `RUNBOOK.md` | what a lost fix, a dead PPS and a desynchronised chrony look like, how to diagnose and recover each, and the other failure modes |
+| `docs/alerts.md` | one-way alerting: metrics, syslog, webhook to n8n or ntfy, Grafana rules, email, Patch Gremlin |
 | `docs/nts.md` | enabling Network Time Security for clients that support it |
 | `docs/offline-updates.md` | pre-staging and WAN-window procedures for the isolated unit |
 | `SECURITY.md` | reporting a vulnerability, what is in scope, the hardening in place |

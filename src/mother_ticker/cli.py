@@ -103,11 +103,33 @@ def cmd_exporter(args: argparse.Namespace) -> int:
     from mother_ticker.collectors.gather import gather
     from mother_ticker.health.evaluate import evaluate
     from mother_ticker.metrics import prometheus, syslog
+    from mother_ticker.metrics.alerts import AlertSender
     from mother_ticker.metrics.model import Metric, snapshot_to_metrics
 
     config = _config(args)
     log = logging.getLogger("exporter")
     stop = threading.Event()
+    alerts = AlertSender(config.alerts)
+    if alerts.enabled:
+        log.info(
+            "webhook alerts to %s (%s, min %s)",
+            config.alerts.webhook_url,
+            config.alerts.format,
+            config.alerts.min_level,
+        )
+
+    def alert_metrics() -> list[Metric]:
+        return [
+            Metric(
+                "mother_ticker_alerts_sent", "counter", "webhook alerts sent", float(alerts.sent)
+            ),
+            Metric(
+                "mother_ticker_alerts_failed",
+                "counter",
+                "webhook alerts that failed",
+                float(alerts.failed),
+            ),
+        ]
 
     def _stop(*_: object) -> None:
         stop.set()
@@ -123,7 +145,9 @@ def cmd_exporter(args: argparse.Namespace) -> int:
 
         def refresh() -> list[Metric]:
             snap = gather(config)
-            return snapshot_to_metrics(snap, evaluate(snap, config.health.thresholds))
+            report = evaluate(snap, config.health.thresholds)
+            alerts.consider(snap, report)
+            return [*snapshot_to_metrics(snap, report), *alert_metrics()]
 
         prometheus.serve_forever(
             config.metrics.prometheus.bind,
@@ -142,7 +166,8 @@ def cmd_exporter(args: argparse.Namespace) -> int:
     def build() -> str:
         snap = gather(config)
         report = evaluate(snap, config.health.thresholds)
-        metrics = snapshot_to_metrics(snap, report)
+        alerts.consider(snap, report)
+        metrics = [*snapshot_to_metrics(snap, report), *alert_metrics()]
         metrics.append(
             Metric(
                 "mother_ticker_relay_send_failures",
@@ -162,6 +187,24 @@ def cmd_exporter(args: argparse.Namespace) -> int:
         )
 
     syslog.run_forever(sender, build, sc.interval_s, stop)
+    return 0
+
+
+def cmd_check_updates(args: argparse.Namespace) -> int:
+    from mother_ticker.collectors.updates import run_check
+
+    config = _config(args)
+    status = run_check(refresh=not args.no_refresh, state_path=config.updates.state_path)
+    log = logging.getLogger("updates")
+    if status.error:
+        log.warning("%s", status.error)
+    log.info(
+        "%d pending, %d security, reboot %s, lists %s",
+        status.pending,
+        status.security,
+        "required" if status.reboot_required else "not required",
+        "refreshed" if status.lists_refreshed else "not refreshed",
+    )
     return 0
 
 
@@ -206,6 +249,11 @@ def build_parser() -> argparse.ArgumentParser:
     sub.add_parser("exporter", help="run the metrics writer for this site").set_defaults(
         func=cmd_exporter
     )
+    cu = sub.add_parser("check-updates", help="record pending package updates (daily timer)")
+    cu.add_argument(
+        "--no-refresh", action="store_true", help="count from the existing apt lists only"
+    )
+    cu.set_defaults(func=cmd_check_updates)
     hc = sub.add_parser("healthcheck", help="one tick of the escalation ladder")
     hc.add_argument("--dry-run", action="store_true", help="decide but do not restart or reboot")
     hc.set_defaults(func=cmd_healthcheck)
@@ -221,6 +269,8 @@ def main(argv: list[str] | None = None) -> int:
         args.dry_run = False
     if not hasattr(args, "demo"):
         args.demo = None
+    if not hasattr(args, "no_refresh"):
+        args.no_refresh = False
     result: int = func(args)
     return result
 

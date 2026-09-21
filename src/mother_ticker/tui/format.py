@@ -12,6 +12,7 @@ from mother_ticker.collectors.model import (
     SystemStatus,
 )
 from mother_ticker.collectors.system import throttle_reasons
+from mother_ticker.collectors.updates import UpdatesStatus
 
 
 def offset_text(seconds: float) -> str:
@@ -100,6 +101,30 @@ def system_lines(system: SystemStatus) -> list[str]:
     return lines
 
 
+def updates_lines(upd: UpdatesStatus) -> list[str]:
+    if not upd.checked:
+        return ["Updates    not checked yet (daily timer, or: sudo mother-ticker check-updates)"]
+    age = duration_text(upd.age_s or 0.0)
+    summary = f"{upd.pending} pending, {upd.security} security" if upd.pending else "none pending"
+    if upd.reboot_required:
+        summary += ", reboot required"
+    lines = [f"Updates    {summary}, checked {age} ago"]
+    if upd.lists_age_s is not None:
+        lines.append(
+            f"apt lists  {duration_text(upd.lists_age_s)} old"
+            + ("" if upd.lists_refreshed else " (not refreshed at last check)")
+        )
+    if upd.security_packages:
+        lines.append(
+            "Security   "
+            + ", ".join(upd.security_packages[:8])
+            + (" ..." if len(upd.security_packages) > 8 else "")
+        )
+    if upd.error:
+        lines.append(f"Check err  {upd.error}")
+    return lines
+
+
 def gnss_panel(gnss: GnssStatus) -> str:
     """Dashboard panel body: fix line, then position when there is one."""
     lines = [gnss_summary(gnss)]
@@ -131,11 +156,26 @@ def pps_panel(pps: PpsStatus) -> str:
     return "\n".join(lines)
 
 
-def network_panel(network: NetworkStatus, hostname: str) -> str:
+def updates_text(upd: UpdatesStatus) -> str:
+    """One quiet line for the dashboard. Counts and alerts go out through metrics and webhooks."""
+    if not upd.checked:
+        return ""
+    if upd.reboot_required:
+        return "reboot required"
+    if upd.pending:
+        return "updates available"
+    return ""
+
+
+def network_panel(
+    network: NetworkStatus, hostname: str, updates: UpdatesStatus | None = None
+) -> str:
     lines = [hostname]
     addrs = network.primary_addresses()
-    lines.extend(addrs[:3] if addrs else ["no address"])
+    lines.extend(addrs[:2] if addrs else ["no address"])
     up = [i.name for i in network.interfaces if i.name != "lo" and i.state == "UP"]
     if up:
         lines.append("up: " + ", ".join(up))
+    if updates is not None and updates_text(updates):
+        lines.append(updates_text(updates))
     return "\n".join(lines)

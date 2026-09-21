@@ -25,6 +25,7 @@ from mother_ticker.tui.format import (
     network_panel,
     pps_panel,
     system_lines,
+    updates_lines,
 )
 from mother_ticker.tui.messages import SnapshotUpdated
 from mother_ticker.tui.widgets import BigClock, IconPanel
@@ -40,6 +41,9 @@ class _Base(Screen[None]):
     BINDINGS: ClassVar[list[BindingType]] = [
         Binding("escape", "back", "Back"),
         Binding("q", "back", "Back", show=False),
+        Binding("ctrl+a", "app.admin_login", "Admin login", show=False),
+        Binding("f1", "app.help", "Keys", show=False),
+        Binding("question_mark", "app.help", "Keys", show=False),
     ]
 
     title_text = ""
@@ -62,7 +66,9 @@ class DashboardScreen(Screen[None]):
     """The idle state: big clock, four panels, a banner that cannot be missed."""
 
     BINDINGS: ClassVar[list[BindingType]] = [
-        Binding("ctrl+q", "app.quit", "Quit", show=False, priority=True)
+        Binding("ctrl+q", "app.quit", "Quit", show=False, priority=True),
+        Binding("ctrl+a", "app.admin_login", "Admin login", show=False, priority=True),
+        Binding("f1", "app.help", "Keys", show=False, priority=True),
     ]
 
     def compose(self) -> ComposeResult:
@@ -73,9 +79,12 @@ class DashboardScreen(Screen[None]):
             yield IconPanel("GNSS", art.SATELLITE, id="panel-gnss")
             yield IconPanel("CHRONY", art.CLOCK, id="panel-chrony")
             yield IconPanel("PPS", art.PULSE, id="panel-pps")
-            yield IconPanel("NETWORK", art.NETWORK, id="panel-net")
+            yield IconPanel("HOST", art.NETWORK, id="panel-net")
         with Horizontal(id="dash-footer"):
-            yield Static("MOTHER TICKER    press any key for the menu", id="footer-left")
+            yield Static(
+                "MOTHER TICKER    any key: menu    Ctrl+A: admin login    F1: keys    Ctrl+Q: quit",
+                id="footer-left",
+            )
             yield Static("", classes="version", id="footer-right")
 
     @property
@@ -94,7 +103,9 @@ class DashboardScreen(Screen[None]):
 
     def on_key(self, event: events.Key) -> None:
         # Any key drops into the menu. Modifier-only and quit chords are left alone.
-        if event.key in ("ctrl+q", "ctrl+c") or event.key.startswith(("shift", "ctrl", "alt")):
+        if event.key in ("ctrl+q", "ctrl+c", "ctrl+a", "f1") or event.key.startswith(
+            ("shift", "ctrl", "alt")
+        ):
             return
         event.stop()
         self.app.push_screen("menu")
@@ -144,7 +155,9 @@ class DashboardScreen(Screen[None]):
         panel("#panel-gnss", "gnss", gnss_panel(snap.gnss))
         panel("#panel-chrony", "chrony", chrony_panel(snap.chrony.tracking))
         panel("#panel-pps", "pps", pps_panel(snap.pps))
-        panel("#panel-net", "network", network_panel(snap.network, snap.system.hostname))
+        panel(
+            "#panel-net", "updates", network_panel(snap.network, snap.system.hostname, snap.updates)
+        )
         self.query_one("#footer-right", Static).update(
             f"{snap.system.hostname}    site {snap.site}    v{snap.version}"
             + (f" {__status__}" if __status__ else "")
@@ -165,15 +178,25 @@ class MenuScreen(_Base):
             Option("Maintenance: reboot, read-only overlay", id="maint"),
             Option("About Mother Ticker", id="about"),
         ]
+        if self.mt_app.config.tui.admin_user:
+            options.append(
+                Option(
+                    f"Admin login: shell as {self.mt_app.config.tui.admin_user} (password)",
+                    id="admin",
+                )
+            )
         if self.mt_app.config.tui.allow_shell:
             options.append(Option("Drop to a shell (exits the TUI)", id="shell"))
+        options.append(Option("Keys: every shortcut on one screen", id="help"))
         options.append(Option("Back to the dashboard", id="back"))
         with Horizontal(id="menu-body"):
             yield Static(art.LOGO, id="menu-logo", markup=False)
             with Vertical(id="menu-column"):
                 yield Static("MOTHER TICKER", id="menu-heading", markup=False)
                 yield OptionList(*options, id="menu")
-        yield self._hint("Up/Down or Tab: move    Enter: select    Esc: dashboard")
+        yield self._hint(
+            "Up/Down, Tab: move    Enter: select    Esc: dashboard    Ctrl+A: admin    F1: keys"
+        )
 
     def on_mount(self) -> None:
         self.query_one("#menu", OptionList).focus()
@@ -182,6 +205,10 @@ class MenuScreen(_Base):
         choice = event.option.id
         if choice == "back":
             self.action_back()
+        elif choice == "admin":
+            self.mt_app.action_admin_login()
+        elif choice == "help":
+            self.mt_app.action_help()
         elif choice == "shell":
             self.app.push_screen(
                 ConfirmScreen("Leave the TUI and open a shell as this user?"),
@@ -403,7 +430,8 @@ class SystemScreen(_Base):
         self._show_snapshot(message.snapshot)
 
     def _show_snapshot(self, snap: Snapshot) -> None:
-        self.query_one("#sysinfo", Static).update("\n".join(system_lines(snap.system)))
+        lines = [*system_lines(snap.system), "", *updates_lines(snap.updates)]
+        self.query_one("#sysinfo", Static).update("\n".join(lines))
 
 
 class MaintenanceScreen(_Base):
@@ -502,6 +530,40 @@ class AboutScreen(_Base):
                 "support.chiefgyk3d.com",
             ]
         )
+
+
+KEY_TABLE = """\
+Everywhere
+  Ctrl+A        admin login: type the admin user's password for a shell (su -)
+  F1 or ?       this screen
+  Ctrl+Q        quit the TUI (systemd restarts it on the console; SSH logs out)
+  Esc or q      back one level
+
+Dashboard
+  any other key open the menu
+
+Menu and lists
+  Up/Down, Tab  move        Enter  select
+  Home/End      first/last  PgUp/PgDn  page
+
+Confirmations
+  y             yes         n or Esc  no (the default)
+
+Journal view
+  r             reload
+
+Local console only
+  Alt+F2        a login prompt on tty2 (Alt+F1 returns to the TUI)
+"""
+
+
+class HelpScreen(_Base):
+    title_text = "Keys"
+
+    def compose(self) -> ComposeResult:
+        yield self._title()
+        yield Static(KEY_TABLE, classes="pre", id="keys", markup=False)
+        yield self._hint()
 
 
 class ConfirmScreen(ModalScreen[bool]):

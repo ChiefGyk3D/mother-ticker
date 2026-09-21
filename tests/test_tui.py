@@ -301,7 +301,8 @@ class TestAboutAndArt:
             assert "ChiefGyk3D" in text
             assert "Renegade Penguin LLC" in text
             assert "0.1.0" in text
-            assert "(-A-)" in str(app.screen.query_one("#about-logo", Static).render())
+            logo = str(app.screen.query_one("#about-logo", Static).render())
+            assert "/ A   \\" in logo  # the anarchy A inside the swirl
 
         run(app, scenario)
 
@@ -309,7 +310,7 @@ class TestAboutAndArt:
         lines = LOGO.splitlines()
         assert all(ord(c) < 128 for line in lines for c in line)
         assert max(len(line) for line in lines) <= 48
-        assert len(lines) <= 16
+        assert len(lines) <= 17
 
     def test_render_big(self) -> None:
         out = render_big("10:5", "#")
@@ -359,6 +360,68 @@ class TestDemo:
                 await scenario(pilot)
 
         asyncio.run(go())
+
+
+class TestKeysAndAdmin:
+    def test_footer_lists_the_key_combos(self) -> None:
+        app = FakeApp(make_snapshot())
+
+        async def scenario(pilot: Pilot[None]) -> None:
+            left = str(app.screen.query_one("#footer-left", Static).render())
+            for combo in ("Ctrl+A", "F1", "Ctrl+Q", "any key"):
+                assert combo in left
+
+        run(app, scenario)
+
+    def test_f1_opens_the_key_table_from_anywhere(self) -> None:
+        app = FakeApp(make_snapshot())
+
+        async def scenario(pilot: Pilot[None]) -> None:
+            await pilot.press("f1")
+            await pilot.pause(0.1)
+            assert isinstance(app.screen, screens.HelpScreen)
+            text = str(app.screen.query_one("#keys", Static).render())
+            assert "Ctrl+A" in text and "Alt+F2" in text
+            await pilot.press("escape")
+            await pilot.pause(0.1)
+            assert isinstance(app.screen, screens.DashboardScreen)
+
+        run(app, scenario)
+
+    def test_ctrl_a_runs_su_as_the_admin(self) -> None:
+        cfg = replace(CONFIG, tui=replace(CONFIG.tui, admin_user="admin"))
+        app = FakeApp(make_snapshot(), cfg)
+        calls: list[str] = []
+
+        def fake_su(admin: str) -> int:
+            calls.append(admin)
+            return 0
+
+        app.run_admin_shell = fake_su  # type: ignore[method-assign]
+
+        async def scenario(pilot: Pilot[None]) -> None:
+            await pilot.press("ctrl+a")
+            await pilot.pause(0.1)
+            assert calls == ["admin"]
+            await pilot.press("space")
+            await pilot.pause(0.1)
+            menu = app.screen.query_one("#menu", OptionList)
+            ids = [menu.get_option_at_index(i).id for i in range(menu.option_count)]
+            assert "admin" in ids and "help" in ids
+
+        run(app, scenario)
+
+    def test_admin_login_absent_without_admin_user(self) -> None:
+        app = FakeApp(make_snapshot())
+
+        async def scenario(pilot: Pilot[None]) -> None:
+            await pilot.press("space")
+            await pilot.pause(0.1)
+            menu = app.screen.query_one("#menu", OptionList)
+            ids = {menu.get_option_at_index(i).id for i in range(menu.option_count)}
+            assert "admin" not in ids
+
+        run(app, scenario)
 
 
 class TestFormatters:

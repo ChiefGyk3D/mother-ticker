@@ -11,6 +11,7 @@ from mother_ticker.collectors.network import collect_network
 from mother_ticker.collectors.pps import collect_pps
 from mother_ticker.collectors.services import collect_services
 from mother_ticker.collectors.system import collect_system
+from mother_ticker.collectors.updates import collect_updates
 from mother_ticker.config import Config
 from mother_ticker.version import __version__
 
@@ -29,4 +30,5 @@ def gather(
         system=collect_system(),
         network=network if network is not None else collect_network(),
         services=collect_services(config.tui.services),
+        updates=collect_updates(config.updates.state_path),
     )

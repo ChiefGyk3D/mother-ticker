@@ -1,0 +1,13 @@
+# Managed by Ansible (mother-ticker). Records pending package updates; installs nothing.
+[Unit]
+Description=Mother Ticker pending-updates check
+Documentation=https://github.com/ChiefGyk3D/mother-ticker
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+Environment=MOTHER_TICKER_CONFIG=/etc/mother-ticker/config.toml
+ExecStart={{ mother_ticker_install_dir }}/venv/bin/mother-ticker check-updates
+StateDirectory=mother-ticker
+TimeoutStartSec=15min

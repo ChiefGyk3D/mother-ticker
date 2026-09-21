@@ -27,7 +27,8 @@ unattended-upgrades; the exporter only sends to the relay.
 
 ## Maintenance mode
 
-The root filesystem is a read-only overlay. Any update must start by
+The root filesystem is a read-only overlay (mode `appliance`, the default;
+a `dev` unit is read-write and skips this dance). Any update must start by
 disabling it and end by re-enabling it, each with a reboot:
 
 ```sh
