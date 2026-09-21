@@ -3,8 +3,9 @@
 ---
 name: Bench result from real hardware
 description: >-
-  You ran this on a Pi with the HAT. Tell us what happened. Every claim marked
-  "verify on hardware" in the README stays open until somebody does this.
+  You ran docs/bench.md on a real Pi, with or without the GPS board. Tell us
+  what happened. Every claim marked "verify on hardware" in the README stays
+  open until somebody does this.
 title: "bench: <what you tested>"
 labels: ["hardware", "bench"]
 body:
@@ -14,7 +15,8 @@ body:
         **Why this is worth your time.** CI never sees a Pi. The PPS GPIO
         number, the RTC overlay name, the ubxtool protocol version and the
         console rendering are all things only a bench can settle, and one
-        report closes a gap for everyone.
+        report closes a gap for everyone. `docs/bench.md` is the checklist;
+        pass 1 needs no GPS board at all.
 
         **What we store:** the OS image, the board revision, command output.
         Please redact your real subnets and public addresses; the placeholders
@@ -24,6 +26,16 @@ body:
     attributes:
       label: OS image and hardware
       placeholder: Raspberry Pi OS Lite 64-bit (trixie, 2026-09-xx), Pi 4B 1 GB, Uputronics GPS/RTC HAT
+    validations:
+      required: true
+  - type: dropdown
+    id: bench_pass
+    attributes:
+      label: Which pass of docs/bench.md
+      options:
+        - Pass 1, bare Pi, no GPS board (HARDWARE_PRESENT=no)
+        - Pass 2, board fitted
+        - Both
     validations:
       required: true
   - type: input
@@ -48,9 +60,11 @@ body:
     attributes:
       label: What you saw
       description: >-
-        `chronyc sources -v`, `ppstest /dev/pps0` for a few seconds,
-        `dmesg | grep -iE 'pps|rtc'`, `journalctl -u mother-ticker-gnss-config`,
-        and what the TUI showed. Paste what applies.
+        Pass 1: the `status` block, what the console did, which checks from
+        the list did not match. Pass 2: `chronyc sources -v`, `ppstest
+        /dev/pps0` for a few seconds, `dmesg | grep -iE 'pps|rtc'`,
+        `journalctl -u mother-ticker-gnss-config`, and what the TUI showed.
+        Paste what applies.
       render: text
     validations:
       required: true
