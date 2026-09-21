@@ -1,0 +1,133 @@
+/* Mother Ticker TUI stylesheet.
+   Colours are the terminal's ANSI palette so the Linux console (16 colours,
+   TERM=linux) and an SSH session look the same. */
+
+Screen {
+    layout: vertical;
+}
+
+#banner {
+    height: 3;
+    content-align: center middle;
+    text-style: bold;
+    background: ansi_green;
+    color: ansi_black;
+}
+#banner.warning {
+    background: ansi_yellow;
+    color: ansi_black;
+}
+#banner.critical {
+    background: ansi_red;
+    color: ansi_white;
+}
+#banner.critical.flash {
+    background: ansi_white;
+    color: ansi_red;
+}
+#banner.warning.flash {
+    background: ansi_black;
+    color: ansi_yellow;
+}
+
+#clock {
+    width: 100%;
+    content-align: center middle;
+    text-align: center;
+    margin-top: 1;
+}
+#clock-sub {
+    width: 100%;
+    text-align: center;
+    color: ansi_bright_black;
+}
+
+#panels {
+    height: auto;
+    margin: 1 2 0 2;
+    grid-size: 2;
+    grid-gutter: 1 2;
+}
+.panel {
+    height: auto;
+    border: round ansi_bright_black;
+    padding: 0 1;
+}
+.panel.warning {
+    border: round ansi_yellow;
+}
+.panel.critical {
+    border: round ansi_red;
+    color: ansi_red;
+    text-style: bold;
+}
+
+#dash-footer {
+    dock: bottom;
+    height: 1;
+    color: ansi_bright_black;
+    padding: 0 1;
+}
+#footer-left {
+    width: 1fr;
+}
+#footer-right {
+    width: auto;
+    text-align: right;
+}
+
+.title {
+    height: 1;
+    text-style: bold;
+    padding: 0 1;
+    background: ansi_blue;
+    color: ansi_white;
+}
+.hint {
+    dock: bottom;
+    height: 1;
+    color: ansi_bright_black;
+    padding: 0 1;
+}
+.pre {
+    padding: 0 1;
+}
+.status-line {
+    padding: 0 1;
+    height: auto;
+}
+
+OptionList {
+    margin: 1 2;
+    height: auto;
+    max-height: 100%;
+}
+DataTable {
+    margin: 0 1;
+    height: 1fr;
+}
+Log {
+    margin: 0 1;
+    height: 1fr;
+}
+
+ConfirmScreen {
+    align: center middle;
+}
+#confirm-box {
+    width: 60;
+    height: auto;
+    border: thick ansi_red;
+    padding: 1 2;
+}
+#confirm-box Label {
+    width: 100%;
+    margin-bottom: 1;
+}
+#confirm-buttons {
+    height: 3;
+    align: center middle;
+}
+#confirm-buttons Button {
+    margin: 0 2;
+}
