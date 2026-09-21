@@ -1,0 +1,139 @@
+---
+- name: Create the TUI user
+  ansible.builtin.user:
+    name: "{{ mother_ticker_user }}"
+    comment: "Mother Ticker status TUI"
+    home: "{{ mother_ticker_user_home }}"
+    create_home: true
+    shell: /usr/local/bin/mother-ticker-login
+    groups: [systemd-journal, video]
+    append: true
+    password_lock: true
+
+- name: Install directory
+  ansible.builtin.file:
+    path: "{{ mother_ticker_install_dir }}"
+    state: directory
+    mode: "0755"
+
+- name: Copy the application source
+  ansible.builtin.copy:
+    src: "{{ playbook_dir }}/../{{ item }}"
+    dest: "{{ mother_ticker_install_dir }}/src/"
+    mode: "preserve"
+  loop:
+    - src
+    - pyproject.toml
+    - README.md
+    - LICENSE
+    - NOTICE
+  register: mother_ticker_source_copy
+
+- name: Create the virtual environment
+  ansible.builtin.command:
+    cmd: python3 -m venv --upgrade-deps {{ mother_ticker_install_dir }}/venv
+    creates: "{{ mother_ticker_install_dir }}/venv/bin/pip"
+
+- name: Copy the wheelhouse for an offline install
+  ansible.builtin.copy:
+    src: "{{ mother_ticker_wheelhouse }}/"
+    dest: "{{ mother_ticker_install_dir }}/wheelhouse/"
+    mode: "0644"
+  when: mother_ticker_wheelhouse | length > 0
+
+- name: Install the application into the venv
+  ansible.builtin.command:
+    cmd: >-
+      {{ mother_ticker_install_dir }}/venv/bin/pip install --upgrade
+      {{ ('--no-index --find-links ' ~ mother_ticker_install_dir ~ '/wheelhouse')
+         if mother_ticker_wheelhouse | length > 0 else '' }}
+      {{ mother_ticker_install_dir }}/src
+  register: mother_ticker_pip
+  changed_when: "'Successfully installed' in mother_ticker_pip.stdout"
+  notify: Restart mother-ticker services
+
+- name: Config directory
+  ansible.builtin.file:
+    path: /etc/mother-ticker
+    state: directory
+    mode: "0755"
+
+- name: Write the application config
+  ansible.builtin.template:
+    src: config.toml.j2
+    dest: /etc/mother-ticker/config.toml
+    mode: "0644"
+  notify: Restart mother-ticker services
+
+- name: Allow the TUI user its few privileged actions
+  ansible.builtin.template:
+    src: sudoers.j2
+    dest: /etc/sudoers.d/mother-ticker
+    mode: "0440"
+    validate: "visudo -cf %s"
+
+- name: Install the login wrapper
+  ansible.builtin.copy:
+    src: mother-ticker-login.sh
+    dest: /usr/local/bin/mother-ticker-login
+    mode: "0755"
+
+- name: Install the maintenance helper
+  ansible.builtin.copy:
+    src: mother-ticker-maint.sh
+    dest: /usr/local/sbin/mother-ticker-maint
+    mode: "0755"
+
+- name: Install the offline bundle builder (used on the main-LAN unit)
+  ansible.builtin.copy:
+    src: "{{ playbook_dir }}/../scripts/stage-offline-bundle.sh"
+    dest: /usr/local/sbin/mother-ticker-stage-bundle
+    mode: "0755"
+
+- name: Install systemd units
+  ansible.builtin.template:
+    src: "{{ item }}.j2"
+    dest: "/etc/systemd/system/{{ item }}"
+    mode: "0644"
+  loop:
+    - mother-ticker-console.service
+    - mother-ticker-exporter.service
+    - mother-ticker-healthcheck.service
+    - mother-ticker-healthcheck.timer
+  notify: Reload systemd
+
+- name: Console font size for the 7 inch panel
+  ansible.builtin.lineinfile:
+    path: /etc/default/console-setup
+    regexp: '^FONTSIZE='
+    line: 'FONTSIZE="{{ mother_ticker_console_fontsize }}"'
+    mode: "0644"
+  notify: Setup console
+
+- name: Hand tty1 to the TUI
+  ansible.builtin.systemd_service:
+    name: getty@tty1.service
+    enabled: false
+    state: stopped
+  when: mother_ticker_console_tui | bool
+
+- name: Enable the console TUI
+  ansible.builtin.systemd_service:
+    name: mother-ticker-console.service
+    enabled: "{{ mother_ticker_console_tui | bool }}"
+    state: "{{ 'started' if mother_ticker_console_tui | bool else 'stopped' }}"
+    daemon_reload: true
+
+- name: Enable the metrics exporter
+  ansible.builtin.systemd_service:
+    name: mother-ticker-exporter.service
+    enabled: "{{ mother_ticker_metrics_mode != 'none' }}"
+    state: "{{ 'started' if mother_ticker_metrics_mode != 'none' else 'stopped' }}"
+    daemon_reload: true
+
+- name: Enable the health-check timer
+  ansible.builtin.systemd_service:
+    name: mother-ticker-healthcheck.timer
+    enabled: true
+    state: started
+    daemon_reload: true

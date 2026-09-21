@@ -1,0 +1,22 @@
+# Managed by Ansible (mother-ticker). Sorted first among the drop-ins so these
+# values win: sshd keeps the first value it reads for each keyword.
+PubkeyAuthentication yes
+PasswordAuthentication no
+KbdInteractiveAuthentication no
+PermitEmptyPasswords no
+PermitRootLogin no
+AllowUsers {{ mother_ticker_ssh_allow_users | join(' ') }}
+MaxAuthTries 3
+MaxSessions 4
+LoginGraceTime 20
+X11Forwarding no
+AllowAgentForwarding no
+AllowTcpForwarding no
+PermitTunnel no
+ClientAliveInterval 60
+ClientAliveCountMax 3
+UseDNS no
+{% if mother_ticker_ssh_penalties | bool %}
+# Built-in brute-force penalties (OpenSSH 9.8+); fail2ban sits on top of these.
+PerSourcePenalties authfail:5s noauth:1s grace-exceeded:20s max:10m min:15s max-sources4:65536 max-sources6:65536 overflow:permissive overflow6:permissive
+{% endif %}

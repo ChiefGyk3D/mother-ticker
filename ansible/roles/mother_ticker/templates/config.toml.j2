@@ -1,0 +1,51 @@
+# Managed by Ansible (mother-ticker). Read by the TUI, the exporter and the health check.
+site = "{{ mother_ticker_site }}"
+hostname = "{{ mother_ticker_hostname }}"
+
+[gpsd]
+host = "127.0.0.1"
+port = 2947
+timeout_s = 5.0
+
+[pps]
+device = "{{ mother_ticker_pps_device }}"
+stale_after_s = 3.0
+
+[metrics]
+mode = "{{ mother_ticker_metrics_mode }}"
+
+[metrics.prometheus]
+bind = "0.0.0.0"
+port = {{ mother_ticker_metrics_port }}
+refresh_s = 5.0
+
+[metrics.syslog]
+host = "{{ mother_ticker_syslog_host }}"
+port = {{ mother_ticker_syslog_port }}
+transport = "{{ mother_ticker_syslog_transport }}"
+framing = "{{ mother_ticker_syslog_framing }}"
+facility = {{ mother_ticker_syslog_facility }}
+app_name = "mother-ticker"
+interval_s = {{ mother_ticker_syslog_interval_s }}
+
+[health]
+restart_after_failures = {{ mother_ticker_health_restart_after }}
+reboot_after_failures = {{ mother_ticker_health_reboot_after }}
+min_uptime_before_reboot_s = {{ mother_ticker_health_min_uptime_s }}
+reboot_enabled = {{ 'true' if mother_ticker_health_reboot_enabled else 'false' }}
+state_path = "/run/mother-ticker/health.json"
+
+[health.thresholds]
+offset_warn_s = 0.001
+offset_crit_s = 0.1
+temp_warn_c = 70.0
+temp_crit_c = 80.0
+disk_warn_pct = 85.0
+mem_warn_pct = 90.0
+min_satellites = 4
+
+[tui]
+refresh_s = 1.0
+network_refresh_s = 30.0
+allow_shell = {{ 'true' if mother_ticker_tui_allow_shell else 'false' }}
+services = ["chrony", "gpsd"]

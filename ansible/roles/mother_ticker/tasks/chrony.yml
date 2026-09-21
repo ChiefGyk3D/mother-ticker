@@ -1,0 +1,43 @@
+---
+- name: Check the NTS certificate and key exist when NTS is enabled
+  ansible.builtin.stat:
+    path: "{{ item }}"
+  loop:
+    - "{{ mother_ticker_nts_cert }}"
+    - "{{ mother_ticker_nts_key }}"
+  register: mother_ticker_nts_files
+  when: mother_ticker_nts_enabled | bool
+
+- name: Refuse NTS without its files
+  ansible.builtin.assert:
+    that: mother_ticker_nts_files.results | map(attribute='stat.exists') | list is all
+    fail_msg: "NTS is enabled but the certificate or key is missing. See docs/nts.md."
+  when: mother_ticker_nts_enabled | bool
+
+- name: Write chrony.conf
+  ansible.builtin.template:
+    src: chrony.conf.j2
+    dest: /etc/chrony/chrony.conf
+    mode: "0644"
+    backup: true
+    validate: "chronyd -p -f %s"
+  notify: Restart chrony
+
+- name: Keep chronyd running
+  ansible.builtin.copy:
+    dest: /etc/systemd/system/chrony.service.d/mother-ticker.conf
+    content: |
+      # Managed by Ansible (mother-ticker).
+      [Service]
+      Restart=always
+      RestartSec=5
+    mode: "0644"
+  notify:
+    - Reload systemd
+    - Restart chrony
+
+- name: Enable chrony
+  ansible.builtin.systemd_service:
+    name: chrony.service
+    enabled: true
+    daemon_reload: true

@@ -1,0 +1,13 @@
+---
+# Mother Ticker: provision a Raspberry Pi 4 as a GPS-disciplined stratum-1 NTP appliance.
+#
+#   ansible-playbook site.yml -l ntp-main
+#   ansible-playbook site.yml -l ntp-malware
+#
+# The site flag (mother_ticker_site) lives in host_vars and decides the few
+# things that differ between the two units. Everything else is identical.
+- name: Mother Ticker stratum-1 NTP appliance
+  hosts: mother_ticker
+  become: true
+  roles:
+    - role: mother_ticker

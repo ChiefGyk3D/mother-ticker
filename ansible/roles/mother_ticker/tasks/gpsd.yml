@@ -1,0 +1,62 @@
+---
+- name: Configure gpsd for the HAT
+  ansible.builtin.template:
+    src: gpsd.default.j2
+    dest: /etc/default/gpsd
+    mode: "0644"
+  notify: Restart gpsd
+
+- name: Disable socket activation so gpsd runs from boot, not on first client
+  ansible.builtin.systemd_service:
+    name: gpsd.socket
+    enabled: false
+    state: stopped
+  failed_when: false
+
+- name: Keep gpsd running
+  ansible.builtin.copy:
+    dest: /etc/systemd/system/gpsd.service.d/mother-ticker.conf
+    content: |
+      # Managed by Ansible (mother-ticker). Restart on any exit; chrony needs the SHM feed.
+      [Unit]
+      After=dev-{{ mother_ticker_gps_device | regex_replace('^/dev/', '') }}.device
+      [Service]
+      Restart=always
+      RestartSec=5
+      [Install]
+      WantedBy=multi-user.target
+    mode: "0644"
+  notify:
+    - Reload systemd
+    - Restart gpsd
+
+- name: Enable gpsd
+  ansible.builtin.systemd_service:
+    name: gpsd.service
+    enabled: true
+    daemon_reload: true
+
+- name: GNSS constellation policy (environment for the boot-time script)
+  ansible.builtin.template:
+    src: gnss.default.j2
+    dest: /etc/default/mother-ticker-gnss
+    mode: "0644"
+
+- name: Install the GNSS configuration script
+  ansible.builtin.copy:
+    src: mother-ticker-gnss-config.sh
+    dest: /usr/local/sbin/mother-ticker-gnss-config
+    mode: "0755"
+
+- name: Install the GNSS configuration unit
+  ansible.builtin.copy:
+    src: mother-ticker-gnss-config.service
+    dest: /etc/systemd/system/mother-ticker-gnss-config.service
+    mode: "0644"
+  notify: Reload systemd
+
+- name: Enable the GNSS configuration unit
+  ansible.builtin.systemd_service:
+    name: mother-ticker-gnss-config.service
+    enabled: true
+    daemon_reload: true

@@ -1,0 +1,32 @@
+# Managed by Ansible (mother-ticker). The status TUI on the local console.
+[Unit]
+Description=Mother Ticker status TUI on tty1
+Documentation=https://github.com/ChiefGyk3D/mother-ticker
+After=systemd-user-sessions.service getty-pre.target gpsd.service chrony.service
+Conflicts=getty@tty1.service
+ConditionPathExists=/dev/tty1
+
+[Service]
+Type=simple
+User={{ mother_ticker_user }}
+Group={{ mother_ticker_user }}
+SupplementaryGroups=systemd-journal video
+WorkingDirectory={{ mother_ticker_user_home }}
+Environment=TERM=linux
+Environment=HOME={{ mother_ticker_user_home }}
+Environment=MOTHER_TICKER_CONFIG=/etc/mother-ticker/config.toml
+ExecStart=/usr/local/bin/mother-ticker-login
+StandardInput=tty
+StandardOutput=tty
+StandardError=journal
+TTYPath=/dev/tty1
+TTYReset=yes
+TTYVHangup=yes
+TTYVTDisallocate=yes
+Restart=always
+RestartSec=2
+NoNewPrivileges=no
+PrivateTmp=yes
+
+[Install]
+WantedBy=multi-user.target

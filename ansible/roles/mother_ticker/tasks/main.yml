@@ -1,0 +1,61 @@
+---
+- name: Sanity checks before touching anything
+  ansible.builtin.import_tasks: preflight.yml
+  tags: [always]
+
+- name: Packages
+  ansible.builtin.import_tasks: packages.yml
+  tags: [packages]
+
+- name: Boot configuration (overlays, UART, watchdog)
+  ansible.builtin.import_tasks: boot_config.yml
+  tags: [boot]
+
+- name: Real-time clock
+  ansible.builtin.import_tasks: rtc.yml
+  tags: [rtc]
+
+- name: gpsd and GNSS receiver policy
+  ansible.builtin.import_tasks: gpsd.yml
+  tags: [gpsd]
+
+- name: chrony
+  ansible.builtin.import_tasks: chrony.yml
+  tags: [chrony]
+
+- name: Host firewall
+  ansible.builtin.import_tasks: firewall.yml
+  tags: [firewall]
+
+- name: SSH and fail2ban
+  ansible.builtin.import_tasks: ssh.yml
+  tags: [ssh]
+
+- name: Services this role does not need
+  ansible.builtin.import_tasks: services_off.yml
+  tags: [services]
+
+- name: Watchdog and journal
+  ansible.builtin.import_tasks: watchdog.yml
+  tags: [watchdog]
+
+- name: Application, TUI user, exporter, health check
+  ansible.builtin.import_tasks: app.yml
+  tags: [app]
+
+- name: Apply pending boot changes
+  ansible.builtin.meta: flush_handlers
+
+- name: Reboot if boot configuration changed
+  ansible.builtin.reboot:
+    msg: "Mother Ticker provisioning: rebooting to apply boot configuration"
+    reboot_timeout: 300
+  when: mother_ticker_reboot_required | default(false)
+
+- name: Verify the result
+  ansible.builtin.import_tasks: verify.yml
+  tags: [verify]
+
+- name: Read-only overlay (last, because it freezes the root filesystem)
+  ansible.builtin.import_tasks: overlay.yml
+  tags: [overlay]

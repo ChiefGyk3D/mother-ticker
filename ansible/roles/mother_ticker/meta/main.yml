@@ -1,0 +1,17 @@
+---
+galaxy_info:
+  author: Renegade Penguin LLC
+  description: GPS-disciplined stratum-1 NTP appliance on Raspberry Pi 4 with a status TUI
+  license: AGPL-3.0-or-later
+  min_ansible_version: "2.16"
+  platforms:
+    - name: Debian
+      versions:
+        - bookworm
+        - trixie
+  galaxy_tags:
+    - ntp
+    - chrony
+    - gpsd
+    - raspberrypi
+dependencies: []

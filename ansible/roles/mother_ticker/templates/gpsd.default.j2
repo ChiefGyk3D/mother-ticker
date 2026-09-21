@@ -1,0 +1,7 @@
+# Managed by Ansible (mother-ticker). Local edits are overwritten.
+# The GNSS UART and the kernel PPS device. -n: start reading at boot, do not
+# wait for a client, because chrony's SHM feed is the first client that matters.
+START_DAEMON="true"
+USBAUTO="false"
+DEVICES="{{ mother_ticker_gps_device }} /dev/{{ mother_ticker_pps_device }}"
+GPSD_OPTIONS="-n"

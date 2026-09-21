@@ -1,0 +1,13 @@
+# Managed by Ansible (mother-ticker).
+[DEFAULT]
+backend = systemd
+banaction = nftables-multiport
+banaction_allports = nftables-allports
+bantime = {{ mother_ticker_fail2ban_bantime }}
+findtime = {{ mother_ticker_fail2ban_findtime }}
+maxretry = {{ mother_ticker_fail2ban_maxretry }}
+ignoreip = 127.0.0.1/8 ::1
+
+[sshd]
+enabled = true
+mode = aggressive

@@ -1,0 +1,5 @@
+# Managed by Ansible (mother-ticker). Exactly the actions the TUI offers, nothing else.
+{{ mother_ticker_user }} ALL=(root) NOPASSWD: /usr/bin/systemctl restart chrony, /usr/bin/systemctl restart chrony.service
+{{ mother_ticker_user }} ALL=(root) NOPASSWD: /usr/bin/systemctl restart gpsd, /usr/bin/systemctl restart gpsd.service
+{{ mother_ticker_user }} ALL=(root) NOPASSWD: /usr/bin/systemctl reboot
+{{ mother_ticker_user }} ALL=(root) NOPASSWD: /usr/local/sbin/mother-ticker-maint on, /usr/local/sbin/mother-ticker-maint off, /usr/local/sbin/mother-ticker-maint status
