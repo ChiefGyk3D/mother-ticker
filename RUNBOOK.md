@@ -180,11 +180,38 @@ serving time while throttled, just slower.
 - The drift file does not persist. PPS re-learns drift within a few minutes
   of each boot; the RTC keeps the boot-time error under a second.
 
+## Updates pending or stale
+
+**Looks like:** yellow banner `2 security updates pending` or `reboot
+required to finish an update`; the host panel line `updates: ...`; the system
+screen's `Updates` and `apt lists` lines.
+
+- Security updates: put the unit in maintenance mode and apply them, per
+  `docs/offline-updates.md` (main LAN: `sudo apt-get dist-upgrade`). The
+  banner clears at the next daily check, or immediately after
+  `sudo mother-ticker check-updates`.
+- `reboot required`: Debian dropped `/run/reboot-required` after a kernel or
+  libc update. Reboot from the maintenance menu when GPS has a fix and the
+  clients can stand a minute without the server.
+- `not checked yet` or an old check on the system screen: the timer did not
+  run or failed; `journalctl -u mother-ticker-updates`. On the isolated unit
+  `apt-get update` fails by design and the count comes from the lists it
+  has; the system screen says so.
+
+## Getting in to debug
+
+Plug a keyboard into the unit, or SSH in as the TUI user, and press
+**Ctrl+A**: the TUI hands the terminal to `su - <admin>`, you type the admin
+password, and you have the admin user's shell with sudo. `exit` brings the
+TUI back. F1 lists every key. The admin password is the gate, so this works
+in appliance mode too; Alt+F2 (a login prompt on tty2) is the fallback if the
+TUI itself is broken.
+
 ## Health-check reboots
 
 The journal line `reboot host (critical for 40 consecutive checks: ...)` is
 the ladder giving up. The unit will not do it again within 30 minutes of
-booting. If it keeps happening, the cause is hardware (antenna, overlay,
+booting. Both modes allow it; a bench box that wedges itself reboots too. If it keeps happening, the cause is hardware (antenna, overlay,
 card) and the journal lines before the reboot name it. Set
 `mother_ticker_health_reboot_enabled: false` to stop the ladder rebooting
 while you investigate; the restarts still run.

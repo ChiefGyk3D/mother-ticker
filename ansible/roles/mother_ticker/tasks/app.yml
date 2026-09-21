@@ -114,6 +114,8 @@
     - mother-ticker-exporter.service
     - mother-ticker-healthcheck.service
     - mother-ticker-healthcheck.timer
+    - mother-ticker-updates.service
+    - mother-ticker-updates.timer
   notify: Reload systemd
 
 - name: Console font size for the 7 inch panel
@@ -151,3 +153,26 @@
     enabled: true
     state: started
     daemon_reload: true
+
+- name: State directory readable by the TUI user
+  ansible.builtin.file:
+    path: /var/lib/mother-ticker
+    state: directory
+    owner: "{{ mother_ticker_user }}"
+    group: "{{ mother_ticker_user }}"
+    mode: "0755"
+
+- name: Enable the daily update check
+  ansible.builtin.systemd:
+    name: mother-ticker-updates.timer
+    enabled: "{{ mother_ticker_updates_check | bool }}"
+    state: "{{ 'started' if mother_ticker_updates_check | bool else 'stopped' }}"
+    daemon_reload: true
+
+- name: Run the update check once now so the dashboard is not blank until tomorrow
+  ansible.builtin.command:
+    cmd: >-
+      {{ mother_ticker_install_dir }}/venv/bin/mother-ticker check-updates
+      {{ '--no-refresh' if mother_ticker_offline | bool else '' }}
+    creates: /var/lib/mother-ticker/updates.json
+  when: mother_ticker_updates_check | bool

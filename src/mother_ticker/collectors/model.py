@@ -7,6 +7,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 
+from mother_ticker.collectors.updates import UpdatesStatus
+
 # gpsd's gnssid values (from the u-blox UBX-NAV-SAT definition that gpsd follows).
 GNSS_NAMES: dict[int, str] = {
     0: "GPS",
@@ -228,6 +230,7 @@ class Snapshot:
     system: SystemStatus
     network: NetworkStatus
     services: tuple[ServiceStatus, ...] = field(default_factory=tuple)
+    updates: UpdatesStatus = field(default_factory=UpdatesStatus)
 
     @staticmethod
     def now() -> datetime:

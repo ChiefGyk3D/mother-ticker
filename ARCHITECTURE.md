@@ -139,6 +139,28 @@ production monitoring stack. It writes to the same relay the segment already
 uses for logs, in the format that relay expects, and that is the only
 outbound path the exporter has.
 
+## Updates and alerts
+
+`mother-ticker-updates.timer` runs `check-updates` daily as root: refresh the
+apt lists where the network allows, simulate a dist-upgrade, count what would
+install and which of those are security updates, write a state file. The
+collectors read that file into the Snapshot, so the same evaluation that
+drives the banner also raises a warning for pending security updates or a
+required reboot, the metrics carry the counts, and the syslog message carries
+them to the relay. Nothing is installed by this path.
+
+The exporter also owns the optional webhook: after each collection it hands
+the snapshot and report to `metrics.alerts.AlertSender`, which sends one
+message when the health level crosses the configured floor in either
+direction and one when a new security update appears. The payload is plain
+JSON or ntfy's publish shape; a bearer token comes from a file at send time.
+`docs/alerts.md` covers the receiving side.
+
+**Admin login.** Ctrl+A on any screen suspends the TUI and runs `su - <admin>`
+on the same terminal; `su` asks for the admin password. That gives a debugging
+shell on a locked-down unit with a keyboard alone, and over SSH from the TUI
+user, without the TUI itself holding any privilege.
+
 ## The health ladder
 
 Every 30 s (`mother-ticker-healthcheck.timer`, root):

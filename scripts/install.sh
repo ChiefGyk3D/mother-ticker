@@ -33,6 +33,8 @@ usage: mother-ticker-install [options]
   --relay-host H --relay-port P --relay-transport tcp|udp --relay-framing newline|octet-counted
   --orphan-stratum N       --overlay auto|yes|no     --nts yes|no
   --nmea-offset SECONDS    --offline yes|no          --wheelhouse DIR
+  --alert-webhook-url URL  --alert-format json|ntfy  --alert-ntfy-topic T  --alert-token-file F
+  --alert-min-level warning|critical
   --extra-vars-file FILE   YAML with any mother_ticker_* variable
   --repo DIR               checkout to run from (default: this script's checkout, else /opt/mother-ticker/repo)
   --tags TAGS              run only these role tags (comma separated)
@@ -48,7 +50,8 @@ die() { echo "mother-ticker-install: $*" >&2; exit 1; }
 SITE=main-lan MODE=appliance OVERLAY=auto NTS=no OFFLINE=no UPSTREAM_SET=0
 ADMIN_USER='' HOSTNAME_SET='' NTP_ALLOW='' MGMT_ALLOW='' METRICS_ALLOW='' METRICS_PORT=''
 UPSTREAM_NTP='' RELAY_HOST='' RELAY_PORT='' RELAY_TRANSPORT='' RELAY_FRAMING='' ORPHAN_STRATUM=''
-NMEA_OFFSET='' WHEELHOUSE='' EXTRA_VARS_FILE='' REPO_DIR=
+NMEA_OFFSET='' WHEELHOUSE='' EXTRA_VARS_FILE='' REPO_DIR=''
+ALERT_WEBHOOK_URL='' ALERT_FORMAT='' ALERT_NTFY_TOPIC='' ALERT_TOKEN_FILE='' ALERT_MIN_LEVEL=''
 
 load_conf() {
     # Only plain KEY=VALUE lines with a known key are honoured; nothing is executed.
@@ -85,6 +88,11 @@ load_conf() {
             WHEELHOUSE) WHEELHOUSE=$val ;;
             EXTRA_VARS_FILE) EXTRA_VARS_FILE=$val ;;
             REPO_DIR) REPO_DIR=$val ;;
+            ALERT_WEBHOOK_URL) ALERT_WEBHOOK_URL=$val ;;
+            ALERT_FORMAT) ALERT_FORMAT=$val ;;
+            ALERT_NTFY_TOPIC) ALERT_NTFY_TOPIC=$val ;;
+            ALERT_TOKEN_FILE) ALERT_TOKEN_FILE=$val ;;
+            ALERT_MIN_LEVEL) ALERT_MIN_LEVEL=$val ;;
             *) echo "mother-ticker-install: ignoring unknown key $key in $file" >&2 ;;
         esac
     done < "$file"
@@ -124,6 +132,11 @@ while [[ $# -gt 0 ]]; do
         --wheelhouse) WHEELHOUSE=$2; shift ;;
         --extra-vars-file) EXTRA_VARS_FILE=$2; shift ;;
         --repo) REPO_DIR=$2; shift ;;
+        --alert-webhook-url) ALERT_WEBHOOK_URL=$2; shift ;;
+        --alert-format) ALERT_FORMAT=$2; shift ;;
+        --alert-ntfy-topic) ALERT_NTFY_TOPIC=$2; shift ;;
+        --alert-token-file) ALERT_TOKEN_FILE=$2; shift ;;
+        --alert-min-level) ALERT_MIN_LEVEL=$2; shift ;;
         --tags) tags=$2; shift ;;
         --check) check=1 ;;
         --inventory-only) inventory_only=$2; shift ;;
@@ -142,6 +155,8 @@ case $OFFLINE in yes|no) ;; *) die "OFFLINE must be yes or no" ;; esac
 [[ -n $ADMIN_USER ]] || die "ADMIN_USER is required (the account Raspberry Pi Imager created)"
 if [[ -n $RELAY_TRANSPORT ]]; then case $RELAY_TRANSPORT in tcp|udp) ;; *) die "RELAY_TRANSPORT must be tcp or udp" ;; esac; fi
 if [[ -n $RELAY_FRAMING ]]; then case $RELAY_FRAMING in newline|octet-counted) ;; *) die "RELAY_FRAMING must be newline or octet-counted" ;; esac; fi
+if [[ -n $ALERT_FORMAT ]]; then case $ALERT_FORMAT in json|ntfy) ;; *) die "ALERT_FORMAT must be json or ntfy" ;; esac; fi
+if [[ -n $ALERT_MIN_LEVEL ]]; then case $ALERT_MIN_LEVEL in warning|critical) ;; *) die "ALERT_MIN_LEVEL must be warning or critical" ;; esac; fi
 if [[ -n $EXTRA_VARS_FILE && ! -r $EXTRA_VARS_FILE ]]; then die "EXTRA_VARS_FILE $EXTRA_VARS_FILE is not readable"; fi
 if [[ $SITE == malware-net && $UPSTREAM_SET -eq 0 ]]; then UPSTREAM_NTP=; UPSTREAM_SET=1; fi
 
@@ -188,6 +203,11 @@ write_inventory() {
         [[ $NTS == yes ]] && echo "      mother_ticker_nts_enabled: true"
         [[ $OFFLINE == yes ]] && echo "      mother_ticker_offline: true"
         [[ -n $WHEELHOUSE ]] && echo "      mother_ticker_wheelhouse: \"$WHEELHOUSE\""
+        [[ -n $ALERT_WEBHOOK_URL ]] && echo "      mother_ticker_alert_webhook_url: \"$ALERT_WEBHOOK_URL\""
+        [[ -n $ALERT_FORMAT ]] && echo "      mother_ticker_alert_format: $ALERT_FORMAT"
+        [[ -n $ALERT_NTFY_TOPIC ]] && echo "      mother_ticker_alert_ntfy_topic: \"$ALERT_NTFY_TOPIC\""
+        [[ -n $ALERT_TOKEN_FILE ]] && echo "      mother_ticker_alert_token_file: \"$ALERT_TOKEN_FILE\""
+        [[ -n $ALERT_MIN_LEVEL ]] && echo "      mother_ticker_alert_min_level: $ALERT_MIN_LEVEL"
         true
     } > "$dir/hosts.yml"
 }
@@ -244,6 +264,11 @@ if [[ $conf_file != "$CONF_DEFAULT" ]]; then
         echo "NMEA_OFFSET=$NMEA_OFFSET"
         echo "NTS=$NTS"
         echo "OFFLINE=$OFFLINE"
+        echo "ALERT_WEBHOOK_URL=$ALERT_WEBHOOK_URL"
+        echo "ALERT_FORMAT=$ALERT_FORMAT"
+        echo "ALERT_NTFY_TOPIC=$ALERT_NTFY_TOPIC"
+        echo "ALERT_TOKEN_FILE=$ALERT_TOKEN_FILE"
+        echo "ALERT_MIN_LEVEL=$ALERT_MIN_LEVEL"
         echo "WHEELHOUSE=$WHEELHOUSE"
         echo "EXTRA_VARS_FILE=$EXTRA_VARS_FILE"
         echo "REPO_DIR=$REPO_DIR"

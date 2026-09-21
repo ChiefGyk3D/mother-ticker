@@ -168,6 +168,49 @@ def snapshot_to_metrics(snapshot: Snapshot, health: HealthReport) -> list[Metric
             site,
         ),
     ]
+    upd = snapshot.updates
+    out.extend(
+        [
+            Metric(
+                "mother_ticker_updates_pending",
+                "gauge",
+                "Packages a dist-upgrade would install",
+                float(upd.pending),
+                site,
+            ),
+            Metric(
+                "mother_ticker_security_updates_pending",
+                "gauge",
+                "Of those, from a security suite",
+                float(upd.security),
+                site,
+            ),
+            Metric(
+                "mother_ticker_reboot_required",
+                "gauge",
+                "1 when /run/reboot-required exists",
+                _b(upd.reboot_required),
+                site,
+            ),
+            Metric(
+                "mother_ticker_updates_checked",
+                "gauge",
+                "1 when the daily update check has run since boot",
+                _b(upd.checked),
+                site,
+            ),
+        ]
+    )
+    if upd.checked_at is not None:
+        out.append(
+            Metric(
+                "mother_ticker_updates_checked_timestamp_seconds",
+                "gauge",
+                "Unix time of the last update check",
+                upd.checked_at,
+                site,
+            )
+        )
     if pps.age_s is not None:
         out.append(
             Metric(

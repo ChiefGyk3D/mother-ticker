@@ -56,5 +56,14 @@ NTS=no
 OFFLINE=no
 WHEELHOUSE=
 
+# One-way alerts on health changes and pending security updates (main-lan;
+# the malware-net unit already reports them through the syslog relay).
+# n8n webhook, ntfy base URL, Grafana webhook contact point, or anything JSON.
+ALERT_WEBHOOK_URL=
+ALERT_FORMAT=json          # json or ntfy
+ALERT_NTFY_TOPIC=mother-ticker
+ALERT_TOKEN_FILE=          # e.g. /etc/mother-ticker/webhook.token (mode 0640 root:motherticker)
+ALERT_MIN_LEVEL=warning    # warning or critical
+
 # Optional YAML file of extra role variables (any mother_ticker_* default).
 EXTRA_VARS_FILE=

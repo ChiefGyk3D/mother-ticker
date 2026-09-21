@@ -197,8 +197,8 @@ the bench:
 | Root filesystem | read-only overlay; updates through maintenance mode | read-write |
 | apt timers | masked | as shipped |
 | Journal | volatile | persistent, capped |
-| TUI shell escape | off (admin SSH still gives a shell) | on |
-| Health ladder | restarts and reboots | restarts only |
+| TUI shell escape | off (admin login and admin SSH still give a shell) | on |
+| Health ladder | restarts and reboots | restarts and reboots |
 
 Use `dev` on the bench while you tinker, then switch back before the unit goes
 into service: change the one value and re-run the installer or the play. Each
@@ -261,6 +261,15 @@ Your admin account keeps a normal shell.
   network (every interface and address), system (uptime, load, memory, disk,
   temperature, throttling, overlay state), maintenance (reboot, overlay on or
   off), drop to a shell, back.
+- **Ctrl+A, admin login.** From any screen, or from the menu: the TUI hands
+  the terminal to `su - <admin user>`, which asks for the admin password, and
+  you have that user's shell (with sudo) for debugging. `exit` returns to the
+  TUI. Works the same with a keyboard plugged into the unit and over SSH, and
+  in both modes, because the password is the gate. Set by `tui.admin_user`,
+  which the role fills from the admin account.
+- **F1 or ?** shows every key combo on one screen. The dashboard footer lists
+  the ones that matter: any key for the menu, Ctrl+A for admin login, F1 for
+  keys, Ctrl+Q to quit.
 - **Ctrl+Q** quits the TUI outright. On tty1 systemd restarts it; over SSH the
   session ends.
 - If the TUI itself is broken: Alt+F2 on the unit gives a login prompt on tty2
@@ -352,6 +361,29 @@ alert on severity alone:
 Transport (`tcp` or `udp`) and TCP framing (`newline` or `octet-counted`) are
 host_vars. `mother_ticker_relay_send_failures` counts sends the relay refused.
 
+## Update alerts
+
+Nothing on a unit installs updates on its own; an appliance with a read-only
+root cannot, and a time source should not surprise you. Instead a daily timer
+(`mother-ticker-updates.timer`) refreshes the apt lists where it can, simulates
+a dist-upgrade, and records how many packages would install and how many of
+those are security updates. That state reaches you one way, through whatever
+the unit already has:
+
+- **Dashboard and system screen**: the host panel shows `updates: 7 pending,
+  2 SECURITY`; a pending security update or a required reboot turns the banner
+  yellow.
+- **Metrics**: `mother_ticker_updates_pending`,
+  `mother_ticker_security_updates_pending`, `mother_ticker_reboot_required`,
+  `mother_ticker_updates_checked_timestamp_seconds`. Scraped on the main LAN;
+  in the syslog JSON body on the malware net, so the SIEM sees them too.
+- **Webhook (optional, main LAN)**: set `mother_ticker_alert_webhook_url` (or
+  `ALERT_WEBHOOK_URL`) to an n8n webhook, an ntfy topic URL or a Grafana
+  webhook contact point, and the exporter posts a JSON message when the
+  health level crosses the floor (and when it recovers) and when new security
+  updates appear. `docs/alerts.md` has the Grafana alert rule, the n8n and
+  ntfy setups, email through either, and where Patch Gremlin fits.
+
 ## Updates
 
 - Main LAN: maintenance is ordinary `apt`. Pull a new release and re-run
@@ -367,6 +399,7 @@ host_vars. `mother_ticker_relay_send_failures` counts sends the relay refused.
 |---|---|
 | `ARCHITECTURE.md` | how chrony, gpsd, PPS and the RTC relate; TUI data flow; metrics paths per site; the health ladder |
 | `RUNBOOK.md` | what a lost fix, a dead PPS and a desynchronised chrony look like, how to diagnose and recover each, and the other failure modes |
+| `docs/alerts.md` | one-way alerting: metrics, syslog, webhook to n8n or ntfy, Grafana rules, email, Patch Gremlin |
 | `docs/nts.md` | enabling Network Time Security for clients that support it |
 | `docs/offline-updates.md` | pre-staging and WAN-window procedures for the isolated unit |
 | `SECURITY.md` | reporting a vulnerability, what is in scope, the hardening in place |

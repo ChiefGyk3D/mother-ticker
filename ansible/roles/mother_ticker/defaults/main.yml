@@ -79,7 +79,18 @@ mother_ticker_syslog_interval_s: 15
 mother_ticker_health_restart_after: 4      # consecutive 30 s ticks
 mother_ticker_health_reboot_after: 40
 mother_ticker_health_min_uptime_s: 1800
-mother_ticker_health_reboot_enabled: "{{ mother_ticker_mode == 'appliance' }}"
+mother_ticker_health_reboot_enabled: true   # both modes: a wedged unit reboots itself
+
+# Daily update check and optional one-way alerts. The check never installs
+# anything; it records what a dist-upgrade would do, and the metrics, the
+# syslog message, the dashboard and the webhook report it.
+mother_ticker_updates_check: true
+mother_ticker_updates_oncalendar: "daily"
+mother_ticker_alert_webhook_url: ""        # n8n, ntfy, Grafana webhook contact point, anything that takes JSON
+mother_ticker_alert_format: json           # json or ntfy
+mother_ticker_alert_ntfy_topic: mother-ticker
+mother_ticker_alert_token_file: ""         # e.g. /etc/mother-ticker/webhook.token, mode 0640 root:motherticker
+mother_ticker_alert_min_level: warning     # warning or critical
 
 # TUI.
 mother_ticker_console_tui: true            # run the TUI on tty1

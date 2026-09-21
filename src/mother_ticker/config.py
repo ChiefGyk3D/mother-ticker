@@ -96,8 +96,34 @@ class TuiConfig:
     refresh_s: float = 1.0
     network_refresh_s: float = 30.0
     allow_shell: bool = True
+    admin_user: str = ""  # `su -` target for the password-gated admin login; empty disables
     ascii_only: bool = False  # "#" instead of block glyphs for the big clock
     services: tuple[str, ...] = ("chrony", "gpsd")
+
+
+@dataclass(frozen=True)
+class UpdatesConfig:
+    """Where the daily update check leaves its result, and how stale is too stale."""
+
+    state_path: Path = Path("/var/lib/mother-ticker/updates.json")
+    stale_after_s: float = 3 * 86400.0
+
+
+@dataclass(frozen=True)
+class AlertsConfig:
+    """Optional outbound webhook for health transitions and pending updates.
+
+    `format` is "json" (a plain JSON document, for n8n and the like) or "ntfy"
+    (ntfy's JSON publish shape, with `topic`). The bearer token, if any, is
+    read from `token_file` at send time and never lives in this file.
+    """
+
+    webhook_url: str = ""
+    format: Literal["json", "ntfy"] = "json"
+    ntfy_topic: str = "mother-ticker"
+    token_file: str = ""
+    min_level: Literal["warning", "critical"] = "warning"
+    timeout_s: float = 10.0
 
 
 @dataclass(frozen=True)
@@ -109,6 +135,8 @@ class Config:
     metrics: MetricsConfig = field(default_factory=MetricsConfig)
     health: HealthConfig = field(default_factory=HealthConfig)
     tui: TuiConfig = field(default_factory=TuiConfig)
+    updates: UpdatesConfig = field(default_factory=UpdatesConfig)
+    alerts: AlertsConfig = field(default_factory=AlertsConfig)
 
 
 def _section(data: dict[str, Any], name: str) -> dict[str, Any]:
@@ -136,6 +164,12 @@ def config_from_dict(data: dict[str, Any]) -> Config:
     health_d = _section(data, "health")
     thr_d = _section(health_d, "thresholds")
     tui_d = _section(data, "tui")
+    upd_d = _section(data, "updates")
+    al_d = _section(data, "alerts")
+    alert_format = _choice(al_d.get("format", "json"), ("json", "ntfy"), "alerts.format")
+    alert_level = _choice(
+        al_d.get("min_level", "warning"), ("warning", "critical"), "alerts.min_level"
+    )
 
     mode = _choice(metrics_d.get("mode", "none"), ("prometheus", "syslog", "none"), "metrics.mode")
     transport = _choice(
@@ -202,8 +236,21 @@ def config_from_dict(data: dict[str, Any]) -> Config:
             refresh_s=float(tui_d.get("refresh_s", TuiConfig.refresh_s)),
             network_refresh_s=float(tui_d.get("network_refresh_s", TuiConfig.network_refresh_s)),
             allow_shell=bool(tui_d.get("allow_shell", TuiConfig.allow_shell)),
+            admin_user=str(tui_d.get("admin_user", TuiConfig.admin_user)),
             ascii_only=bool(tui_d.get("ascii_only", TuiConfig.ascii_only)),
             services=tuple(str(s) for s in tui_d.get("services", list(TuiConfig.services))),
+        ),
+        updates=UpdatesConfig(
+            state_path=Path(str(upd_d.get("state_path", UpdatesConfig.state_path))),
+            stale_after_s=float(upd_d.get("stale_after_s", UpdatesConfig.stale_after_s)),
+        ),
+        alerts=AlertsConfig(
+            webhook_url=str(al_d.get("webhook_url", "")),
+            format=alert_format,  # type: ignore[arg-type]
+            ntfy_topic=str(al_d.get("ntfy_topic", AlertsConfig.ntfy_topic)),
+            token_file=str(al_d.get("token_file", "")),
+            min_level=alert_level,  # type: ignore[arg-type]
+            timeout_s=float(al_d.get("timeout_s", AlertsConfig.timeout_s)),
         ),
     )
 

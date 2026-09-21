@@ -6,8 +6,25 @@ follows [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- Daily pending-updates check (`mother-ticker check-updates`, a systemd
+  timer) that installs nothing: counts and security counts on the host panel
+  and system screen, a warning on pending security updates or a required
+  reboot, `mother_ticker_updates_*` metrics, and the same values in the
+  syslog body for the malware-net relay.
+- Optional one-way webhook alerts from the exporter (JSON for n8n and
+  friends, or ntfy's publish shape) on health transitions and new security
+  updates, with a bearer token read from a file. `docs/alerts.md` covers
+  Grafana rules, n8n, ntfy, email and where Patch Gremlin fits.
+- Admin login from the TUI: Ctrl+A or a menu item hands the terminal to
+  `su - <admin>` for a password-gated shell, with a keyboard or over SSH, in
+  both modes. F1 shows every key; the dashboard footer lists the main ones.
+
 ### Changed
 
+- The health ladder may reboot in both modes; a dev box that wedges itself
+  reboots too.
 - A `mode` flag (`appliance`, the default, or `dev`) now decides the
   read-only overlay, apt timer masking, journal storage, the TUI's shell
   escape and whether the health ladder may reboot; `site` decides only

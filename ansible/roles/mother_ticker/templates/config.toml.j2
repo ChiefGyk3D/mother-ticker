@@ -48,4 +48,16 @@ min_satellites = 4
 refresh_s = 1.0
 network_refresh_s = 30.0
 allow_shell = {{ 'true' if mother_ticker_tui_allow_shell else 'false' }}
+admin_user = "{{ mother_ticker_admin_user }}"
 services = ["chrony", "gpsd"]
+
+[updates]
+state_path = "/var/lib/mother-ticker/updates.json"
+stale_after_s = 259200.0
+
+[alerts]
+webhook_url = "{{ mother_ticker_alert_webhook_url }}"
+format = "{{ mother_ticker_alert_format }}"
+ntfy_topic = "{{ mother_ticker_alert_ntfy_topic }}"
+token_file = "{{ mother_ticker_alert_token_file }}"
+min_level = "{{ mother_ticker_alert_min_level }}"

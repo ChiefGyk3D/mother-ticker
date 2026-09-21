@@ -1,0 +1,12 @@
+# Managed by Ansible (mother-ticker).
+[Unit]
+Description=Daily Mother Ticker pending-updates check
+
+[Timer]
+OnCalendar={{ mother_ticker_updates_oncalendar }}
+RandomizedDelaySec=1h
+Persistent=true
+Unit=mother-ticker-updates.service
+
+[Install]
+WantedBy=timers.target
