@@ -105,7 +105,10 @@ def updates_lines(upd: UpdatesStatus) -> list[str]:
     if not upd.checked:
         return ["Updates    not checked yet (daily timer, or: sudo mother-ticker check-updates)"]
     age = duration_text(upd.age_s or 0.0)
-    lines = [f"Updates    {updates_text(upd).removeprefix('updates: ')}, checked {age} ago"]
+    summary = f"{upd.pending} pending, {upd.security} security" if upd.pending else "none pending"
+    if upd.reboot_required:
+        summary += ", reboot required"
+    lines = [f"Updates    {summary}, checked {age} ago"]
     if upd.lists_age_s is not None:
         lines.append(
             f"apt lists  {duration_text(upd.lists_age_s)} old"
@@ -154,15 +157,14 @@ def pps_panel(pps: PpsStatus) -> str:
 
 
 def updates_text(upd: UpdatesStatus) -> str:
+    """One quiet line for the dashboard. Counts and alerts go out through metrics and webhooks."""
     if not upd.checked:
-        return "updates: not checked yet"
+        return ""
     if upd.reboot_required:
-        return "updates: REBOOT REQUIRED"
-    if upd.security:
-        return f"updates: {upd.pending} pending, {upd.security} SECURITY"
+        return "reboot required"
     if upd.pending:
-        return f"updates: {upd.pending} pending"
-    return "updates: none pending"
+        return "updates available"
+    return ""
 
 
 def network_panel(
@@ -174,6 +176,6 @@ def network_panel(
     up = [i.name for i in network.interfaces if i.name != "lo" and i.state == "UP"]
     if up:
         lines.append("up: " + ", ".join(up))
-    if updates is not None:
+    if updates is not None and updates_text(updates):
         lines.append(updates_text(updates))
     return "\n".join(lines)

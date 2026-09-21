@@ -370,19 +370,22 @@ a dist-upgrade, and records how many packages would install and how many of
 those are security updates. That state reaches you one way, through whatever
 the unit already has:
 
-- **Dashboard and system screen**: the host panel shows `updates: 7 pending,
-  2 SECURITY`; a pending security update or a required reboot turns the banner
-  yellow.
-- **Metrics**: `mother_ticker_updates_pending`,
+- **Metrics** (the primary path): `mother_ticker_updates_pending`,
   `mother_ticker_security_updates_pending`, `mother_ticker_reboot_required`,
-  `mother_ticker_updates_checked_timestamp_seconds`. Scraped on the main LAN;
-  in the syslog JSON body on the malware net, so the SIEM sees them too.
+  `mother_ticker_updates_checked_timestamp_seconds`. Scraped by Prometheus on
+  the main LAN for Grafana alert rules; in the syslog JSON body on the malware
+  net, so the SIEM sees them too.
 - **Webhook (optional, main LAN)**: set `mother_ticker_alert_webhook_url` (or
-  `ALERT_WEBHOOK_URL`) to an n8n webhook, an ntfy topic URL or a Grafana
-  webhook contact point, and the exporter posts a JSON message when the
-  health level crosses the floor (and when it recovers) and when new security
-  updates appear. `docs/alerts.md` has the Grafana alert rule, the n8n and
-  ntfy setups, email through either, and where Patch Gremlin fits.
+  `ALERT_WEBHOOK_URL`) to an ntfy server for phone push, or to an n8n webhook
+  or a Grafana webhook contact point, and the exporter posts a message when
+  the health level crosses the floor (and when it recovers) and when new
+  security updates appear.
+- **On screen, deliberately little**: the host panel says `updates available`
+  (or `reboot required`) and nothing more; the banner never turns yellow for
+  updates. The system screen has the counts for when you go looking.
+
+`docs/alerts.md` has the Grafana alert rules, the ntfy and n8n setups, email
+through either, and where Patch Gremlin fits.
 
 ## Updates
 

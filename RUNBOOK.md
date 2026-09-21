@@ -182,14 +182,14 @@ serving time while throttled, just slower.
 
 ## Updates pending or stale
 
-**Looks like:** yellow banner `2 security updates pending` or `reboot
-required to finish an update`; the host panel line `updates: ...`; the system
-screen's `Updates` and `apt lists` lines.
+**Looks like:** a Grafana alert or a webhook message; on the unit only the
+words `updates available` or `reboot required` on the host panel, with the
+counts on the system screen. The banner never changes for updates.
 
 - Security updates: put the unit in maintenance mode and apply them, per
   `docs/offline-updates.md` (main LAN: `sudo apt-get dist-upgrade`). The
-  banner clears at the next daily check, or immediately after
-  `sudo mother-ticker check-updates`.
+  metrics and the panel line clear at the next daily check, or immediately
+  after `sudo mother-ticker check-updates`.
 - `reboot required`: Debian dropped `/run/reboot-required` after a kernel or
   libc update. Reboot from the maintenance menu when GPS has a fix and the
   clients can stand a minute without the server.

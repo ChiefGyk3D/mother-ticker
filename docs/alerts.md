@@ -10,9 +10,13 @@ in. Everything here is outbound from the unit and read-only for the unit.
 |---|---|---|
 | PPS gone, no fix, chrony unsynchronised, gpsd or chronyd down | critical | banner, `mother_ticker_health_level`=2, syslog severity 2, webhook |
 | GPS lost and serving stratum 2, SoC warm, few satellites, offset drift | warning | banner, level 1, syslog severity 4, webhook |
-| Security updates pending, or a reboot required to finish an update | warning | host panel, banner, `mother_ticker_security_updates_pending`, `mother_ticker_reboot_required`, webhook |
-| Other updates pending | info | host panel, `mother_ticker_updates_pending` |
-| Update check never ran or its lists are stale | info | system screen, `mother_ticker_updates_checked`, `mother_ticker_updates_checked_timestamp_seconds` |
+| Security updates pending, or a reboot required to finish an update | alert only | `mother_ticker_security_updates_pending`, `mother_ticker_reboot_required`, webhook; on screen just "updates available" or "reboot required" |
+| Other updates pending | alert only | `mother_ticker_updates_pending`; on screen "updates available" |
+| Update check never ran or its lists are stale | alert only | `mother_ticker_updates_checked`, `mother_ticker_updates_checked_timestamp_seconds`; counts on the system screen |
+
+Pending updates never touch the banner. The dashboard is for the time
+service; updates are a routine chore and belong in the alerting paths below,
+with at most two words on the host panel.
 
 The daily check (`mother-ticker-updates.timer`, `mother-ticker check-updates`)
 installs nothing. It runs `apt-get update` where the network allows, then
@@ -22,10 +26,10 @@ isolated unit `apt-get update` fails and the count comes from the lists the
 unit has, which is stated on the system screen. Run it by hand with
 `sudo mother-ticker check-updates` (`--no-refresh` to skip the fetch).
 
-## Main LAN: Grafana alert rules on the scraped metrics
+## Main LAN: Grafana alert rules on the scraped metrics (start here)
 
-The exporter serves `/metrics` on 9101 to the Prometheus scraper. Two rules
-cover most of it. Grafana's contact points then deliver by email, Slack,
+The exporter serves `/metrics` on 9101 to the Prometheus scraper. This is
+the path that needs nothing new on the unit; the rules below cover it. Grafana's contact points then deliver by email, Slack,
 Discord, Matrix, ntfy, PagerDuty or a webhook, so email lives in Grafana, not
 on the unit.
 
@@ -82,7 +86,14 @@ out when the health level crosses the floor in either direction and when a
 new security update appears, never on every tick. Sends are counted in
 `mother_ticker_alerts_sent` and `mother_ticker_alerts_failed`.
 
-**JSON shape** (`format: json`), one document per event:
+**ntfy** (`format: ntfy`): point `webhook_url` at the ntfy server's base URL
+(`https://ntfy.lab.example`) and set `ntfy_topic`; the payload uses ntfy's
+JSON publish format with priority 5 for critical, 4 for warning, 3 for
+recovery, and a bearer token if the topic is protected. Phones subscribed to
+the topic get a push. This is the shortest route from a unit to a pocket.
+
+**JSON shape** (`format: json`), one document per event, for n8n, a Grafana
+webhook contact point, Home Assistant or anything else that takes JSON:
 
 ```json
 {"kind":"health","level":"critical","title":"critical: time service",
@@ -95,12 +106,6 @@ new security update appears, never on every tick. Sends are counted in
 **n8n**: a Webhook node (POST) receiving that document, then whatever you
 route to: an Email node, a Matrix or Discord node, a Grafana annotation.
 `kind`, `level` and `host` are the fields to branch on.
-
-**ntfy** (`format: ntfy`): point `webhook_url` at the ntfy server's base URL
-(`https://ntfy.lab.example`) and set `ntfy_topic`; the payload uses ntfy's
-JSON publish format with priority 5 for critical, 4 for warning, 3 for
-recovery, and a bearer token if the topic is protected. Phones subscribed to
-the topic get a push.
 
 ## Malware net: through the relay only
 

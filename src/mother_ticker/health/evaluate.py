@@ -116,19 +116,6 @@ def _check_host(snapshot: Snapshot, thresholds: Thresholds, add: Adder) -> None:
         add(Level.WARNING, "system", f"memory {system.mem_used_pct:.0f}% used")
 
 
-def _check_updates(snapshot: Snapshot, add: Adder) -> None:
-    """Security updates and a pending reboot are worth the banner; the rest is on the panel."""
-    upd = snapshot.updates
-    if upd.security > 0:
-        add(
-            Level.WARNING,
-            "updates",
-            f"{upd.security} security update{'s' if upd.security != 1 else ''} pending",
-        )
-    if upd.reboot_required:
-        add(Level.WARNING, "updates", "reboot required to finish an update")
-
-
 def evaluate(snapshot: Snapshot, thresholds: Thresholds) -> HealthReport:
     problems: list[Problem] = []
 
@@ -140,7 +127,6 @@ def evaluate(snapshot: Snapshot, thresholds: Thresholds) -> HealthReport:
     _check_chrony(snapshot, thresholds, add)
     _check_services(snapshot, add)
     _check_host(snapshot, thresholds, add)
-    _check_updates(snapshot, add)
 
     level = max((p.level for p in problems), default=Level.OK)
     return HealthReport(level=level, problems=tuple(problems))

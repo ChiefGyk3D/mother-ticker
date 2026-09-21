@@ -9,10 +9,10 @@ follows [Semantic Versioning](https://semver.org/).
 ### Added
 
 - Daily pending-updates check (`mother-ticker check-updates`, a systemd
-  timer) that installs nothing: counts and security counts on the host panel
-  and system screen, a warning on pending security updates or a required
-  reboot, `mother_ticker_updates_*` metrics, and the same values in the
-  syslog body for the malware-net relay.
+  timer) that installs nothing: `mother_ticker_updates_*` metrics for Grafana
+  rules, the same values in the syslog body for the malware-net relay, counts
+  on the system screen, and only the words "updates available" or "reboot
+  required" on the dashboard. The banner never changes for updates.
 - Optional one-way webhook alerts from the exporter (JSON for n8n and
   friends, or ntfy's publish shape) on health transitions and new security
   updates, with a bearer token read from a file. `docs/alerts.md` covers

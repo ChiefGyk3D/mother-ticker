@@ -124,16 +124,10 @@ def decide(
     security = snapshot.updates.security_packages
     if last_security is not None and set(security) - set(last_security):
         names = ", ".join(sorted(set(security) - set(last_security)))
-        alerts.append(
-            Alert(
-                "updates",
-                Level.WARNING,
-                f"{snapshot.updates.security} security updates pending",
-                f"new: {names}",
-                snapshot,
-                report,
-            )
-        )
+        title = f"{snapshot.updates.security} security updates pending"
+        if snapshot.updates.reboot_required:
+            title += ", reboot required"
+        alerts.append(Alert("updates", Level.WARNING, title, f"new: {names}", snapshot, report))
     return alerts
 
 

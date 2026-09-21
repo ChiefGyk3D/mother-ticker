@@ -142,7 +142,7 @@ class TestAlertDecisions:
 
     def test_crossing_into_warning_and_recovering(self) -> None:
         ok = make_snapshot()
-        sick = replace(ok, updates=UpdatesStatus(checked_at=1.0, reboot_required=True))
+        sick = replace(ok, system=replace(ok.system, temperature_c=72.0))
         up = alerts.decide(
             sick,
             evaluate(sick, Thresholds()),
@@ -162,7 +162,7 @@ class TestAlertDecisions:
 
     def test_below_floor_is_silent(self) -> None:
         ok = make_snapshot()
-        sick = replace(ok, updates=UpdatesStatus(checked_at=1.0, reboot_required=True))
+        sick = replace(ok, system=replace(ok.system, temperature_c=72.0))
         out = alerts.decide(
             sick,
             evaluate(sick, Thresholds()),
@@ -237,7 +237,7 @@ class TestSender:
         sender.consider(
             snap, evaluate(snap, Thresholds())
         )  # first observation: remembers, sends nothing
-        sick = replace(snap, updates=UpdatesStatus(checked_at=1.0, reboot_required=True))
+        sick = replace(snap, system=replace(snap.system, temperature_c=72.0))
         sent = sender.consider(sick, evaluate(sick, Thresholds()))
         server.shutdown()
         assert len(sent) == 1 and sender.sent == 1 and sender.failed == 0
@@ -254,7 +254,7 @@ class TestSender:
         )
         snap = make_snapshot()
         sender.consider(snap, evaluate(snap, Thresholds()))
-        sick = replace(snap, updates=UpdatesStatus(checked_at=1.0, reboot_required=True))
+        sick = replace(snap, system=replace(snap.system, temperature_c=72.0))
         sender.consider(sick, evaluate(sick, Thresholds()))
         assert sender.failed == 1 and sender.last_error
 
@@ -262,6 +262,8 @@ class TestSender:
         sender = alerts.AlertSender(AlertsConfig())
         snap = make_snapshot()
         sender.consider(snap, evaluate(snap, Thresholds()))
-        sick = replace(snap, updates=UpdatesStatus(checked_at=1.0, reboot_required=True))
+        sick = replace(
+            snap, updates=UpdatesStatus(checked_at=1.0, security=1, security_packages=("libc6",))
+        )
         assert len(sender.consider(sick, evaluate(sick, Thresholds()))) == 1
         assert sender.sent == 0
