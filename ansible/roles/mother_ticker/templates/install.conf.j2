@@ -16,6 +16,7 @@ RELAY_TRANSPORT={{ mother_ticker_syslog_transport }}
 RELAY_FRAMING={{ mother_ticker_syslog_framing }}
 ORPHAN_STRATUM={{ mother_ticker_orphan_stratum }}
 OVERLAY={{ 'yes' if mother_ticker_overlay | bool else 'no' }}
+HARDWARE_PRESENT={{ 'yes' if mother_ticker_hardware_present | bool else 'no' }}
 NMEA_OFFSET={{ mother_ticker_nmea_offset }}
 NTS={{ 'yes' if mother_ticker_nts_enabled | bool else 'no' }}
 OFFLINE={{ 'yes' if mother_ticker_offline | bool else 'no' }}

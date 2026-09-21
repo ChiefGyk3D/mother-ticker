@@ -20,6 +20,7 @@
   register: mother_ticker_pps_node
 
 - name: PPS device must exist
+  when: mother_ticker_hardware_present | bool
   ansible.builtin.assert:
     that: mother_ticker_pps_node.stat.exists
     fail_msg: >-
@@ -32,6 +33,7 @@
   register: mother_ticker_rtc_node
 
 - name: RTC must exist
+  when: mother_ticker_hardware_present | bool
   ansible.builtin.assert:
     that: mother_ticker_rtc_node.stat.exists
     fail_msg: >-
@@ -44,6 +46,7 @@
   register: mother_ticker_gps_node
 
 - name: GPS UART must exist
+  when: mother_ticker_hardware_present | bool
   ansible.builtin.assert:
     that: mother_ticker_gps_node.stat.exists
     fail_msg: >-
@@ -71,6 +74,14 @@
 - name: Show the status
   ansible.builtin.debug:
     msg: "{{ mother_ticker_status.stdout_lines }}"
+
+- name: Say so when the HAT is not fitted yet
+  ansible.builtin.debug:
+    msg: >-
+      mother_ticker_hardware_present is false: PPS, RTC and UART checks were skipped and the
+      health ladder will not reboot. The dashboard shows the missing hardware as critical, which
+      is correct. Set it to true and re-run once the board is fitted.
+  when: not mother_ticker_hardware_present | bool
 
 - name: Warn when the appliance is not yet healthy
   ansible.builtin.debug:

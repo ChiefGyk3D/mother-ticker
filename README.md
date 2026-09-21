@@ -213,6 +213,20 @@ overwriting an existing one). So a unit deployed from a controller can later
 be re-provisioned, or switched between modes, from its own shell with no
 controller in reach.
 
+## Testing before the HAT arrives
+
+Most of the appliance has nothing to do with the GPS board. With a bare Pi 4
+you can already test both deploy paths, the console TUI on the DSI panel,
+admin login, sshd and fail2ban, nftables, the exporter and the syslog relay,
+the update check, the overlay and maintenance mode. Set
+`mother_ticker_hardware_present: false` (Ansible) or `HARDWARE_PRESENT=no`
+(`install.conf`), deploy, and the role skips the PPS, RTC and UART checks,
+leaves the GNSS policy unit disabled, and stops the health ladder rebooting a
+unit that can never get a fix. The dashboard shows the missing hardware as
+critical, which is the truth. When the board is fitted, set it back to true
+and re-run; the boot configuration was already applied, so only the checks
+and the GNSS unit change.
+
 ## Per-site deployment
 
 The isolated unit has no internet, so it is **built on a network that has

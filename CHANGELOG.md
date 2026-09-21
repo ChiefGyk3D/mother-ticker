@@ -6,6 +6,12 @@ follows [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- `mother_ticker_hardware_present` / `HARDWARE_PRESENT` for benching a unit
+  before the GPS board is fitted: skips the PPS, RTC and UART checks, leaves
+  the GNSS policy unit disabled, and stops the health ladder rebooting.
+
 ## [0.1.0] - 2026-09-21
 
 First cut, **alpha**: tested in CI against recorded gpsd and chrony output and
