@@ -93,7 +93,8 @@ installer, and an install config rendered from the deployed values.
    metrics/      model: Snapshot -> [Metric]; prometheus: text exposition + HTTP;
                  syslog: RFC 5424 + JSON body, TCP or UDP
    tui/          Textual app: collector thread -> Snapshot -> every open screen
-   cli.py        tui | status | metrics | exporter | healthcheck, --version
+   bench/        fake_gpsd: a pretend receiver on gpsd's socket for a unit without one
+   cli.py        tui | status | metrics | exporter | healthcheck | check-updates | fake-gpsd
 ```
 
 **One evaluation.** `health.evaluate` is the only place that decides what is

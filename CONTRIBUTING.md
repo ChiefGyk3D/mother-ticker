@@ -89,7 +89,8 @@ GNSS script, chrony.conf or the boot configuration, run it on a real unit:
 5. For the isolated profile, also confirm the overlay: `mother-ticker-maint
    status`, then that a file created in `/etc` is gone after a reboot.
 
-Say in the PR what you ran and on what OS image.
+Say in the PR what you ran and on what OS image. `docs/bench.md` is the
+full checklist, including what can be tested before the board is fitted.
 
 ## Pull requests
 

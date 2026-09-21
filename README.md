@@ -227,6 +227,12 @@ critical, which is the truth. When the board is fitted, set it back to true
 and re-run; the boot configuration was already applied, so only the checks
 and the GNSS unit change.
 
+A pretend receiver covers the rest: `mother-ticker fake-gpsd` listens where
+gpsd would and streams a 3D fix (or `--scenario nofix`), so the GNSS screen,
+the gpsd collector and the health ladder run against real sockets. It
+produces no PPS, so chrony stays critical, as it should. `docs/bench.md` is
+the checklist for this pass and for the one after the board arrives.
+
 ## Per-site deployment
 
 The isolated unit has no internet, so it is **built on a network that has
@@ -419,6 +425,7 @@ through either, and where Patch Gremlin fits.
 |---|---|
 | `ARCHITECTURE.md` | how chrony, gpsd, PPS and the RTC relate; TUI data flow; metrics paths per site; the health ladder |
 | `RUNBOOK.md` | what a lost fix, a dead PPS and a desynchronised chrony look like, how to diagnose and recover each, and the other failure modes |
+| `docs/bench.md` | the bench checklist: what to run on a bare Pi now and on the fitted board later, and what to record |
 | `docs/alerts.md` | one-way alerting: metrics, syslog, webhook to n8n or ntfy, Grafana rules, email, Patch Gremlin |
 | `grafana/README.md` | the alert rules, dashboard and provisioning file for the Prometheus and Grafana host |
 | `docs/nts.md` | enabling Network Time Security for clients that support it |
