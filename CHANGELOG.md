@@ -6,6 +6,7 @@ follows [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-09-21
 ### Added
 
 - Daily pending-updates check (`mother-ticker check-updates`, a systemd
