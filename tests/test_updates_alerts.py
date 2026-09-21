@@ -20,6 +20,7 @@ from mother_ticker.config import AlertsConfig, Thresholds
 from mother_ticker.health.evaluate import Level, evaluate
 from mother_ticker.metrics import alerts
 from mother_ticker.metrics.model import snapshot_to_metrics
+from mother_ticker.tui.format import updates_text
 from tests.conftest import make_snapshot
 
 SIM = """NOTE: This is only a simulation!
@@ -94,25 +95,24 @@ class TestState:
 
 
 class TestHealthAndMetrics:
-    def test_security_updates_warn(self) -> None:
-        snap = make_snapshot()
-        snap = replace(
-            snap,
-            updates=UpdatesStatus(
-                checked_at=1.0, pending=3, security=1, security_packages=("libc6",)
-            ),
+    def test_updates_never_touch_the_banner(self) -> None:
+        """Updates are for the alerting paths; the screen says "updates available" at most."""
+        for upd in (
+            UpdatesStatus(checked_at=1.0, pending=3, security=1, security_packages=("libc6",)),
+            UpdatesStatus(checked_at=1.0, reboot_required=True),
+        ):
+            assert evaluate(replace(make_snapshot(), updates=upd), Thresholds()).level is Level.OK
+
+    def test_dashboard_text_is_minimal(self) -> None:
+        assert updates_text(UpdatesStatus()) == ""
+        assert updates_text(UpdatesStatus(checked_at=1.0)) == ""
+        assert (
+            updates_text(UpdatesStatus(checked_at=1.0, pending=7, security=2))
+            == "updates available"
         )
-        report = evaluate(snap, Thresholds())
-        assert report.level is Level.WARNING
-        assert "1 security update pending" in report.headline
-
-    def test_plain_updates_do_not_warn(self) -> None:
-        snap = replace(make_snapshot(), updates=UpdatesStatus(checked_at=1.0, pending=3))
-        assert evaluate(snap, Thresholds()).level is Level.OK
-
-    def test_reboot_required_warns(self) -> None:
-        snap = replace(make_snapshot(), updates=UpdatesStatus(checked_at=1.0, reboot_required=True))
-        assert "reboot required" in evaluate(snap, Thresholds()).headline
+        assert (
+            updates_text(UpdatesStatus(checked_at=1.0, reboot_required=True)) == "reboot required"
+        )
 
     def test_metrics_present(self) -> None:
         snap = replace(
@@ -183,7 +183,7 @@ class TestAlertDecisions:
         first = alerts.decide(
             snap,
             report,
-            last_level=Level.WARNING,
+            last_level=Level.OK,
             last_security=("libc6",),
             min_level=Level.WARNING,
         )
@@ -191,7 +191,7 @@ class TestAlertDecisions:
         again = alerts.decide(
             snap,
             report,
-            last_level=Level.WARNING,
+            last_level=Level.OK,
             last_security=("libc6", "sshd"),
             min_level=Level.WARNING,
         )
