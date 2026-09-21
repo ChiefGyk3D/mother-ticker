@@ -145,7 +145,7 @@ OptionList > .option-list--option-highlighted {
 }
 #menu-logo {
     width: 50;
-    height: 16;
+    height: 17;
     color: #4fd1e3;
 }
 #menu-column {
@@ -200,7 +200,7 @@ Log {
 }
 #about-logo {
     width: 50;
-    height: 16;
+    height: 17;
     color: #4fd1e3;
 }
 #about-text {

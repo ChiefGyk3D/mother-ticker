@@ -301,7 +301,8 @@ class TestAboutAndArt:
             assert "ChiefGyk3D" in text
             assert "Renegade Penguin LLC" in text
             assert "0.1.0" in text
-            assert "(-A-)" in str(app.screen.query_one("#about-logo", Static).render())
+            logo = str(app.screen.query_one("#about-logo", Static).render())
+            assert "/ A   \\" in logo  # the anarchy A inside the swirl
 
         run(app, scenario)
 
@@ -309,7 +310,7 @@ class TestAboutAndArt:
         lines = LOGO.splitlines()
         assert all(ord(c) < 128 for line in lines for c in line)
         assert max(len(line) for line in lines) <= 48
-        assert len(lines) <= 16
+        assert len(lines) <= 17
 
     def test_render_big(self) -> None:
         out = render_big("10:5", "#")
