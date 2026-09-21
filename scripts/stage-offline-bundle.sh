@@ -13,7 +13,7 @@
 #   tar -C / -xf mother-ticker-offline-<date>.tar --no-same-owner ./var/lib/apt/lists
 #   cp bundle/debs/*.deb /var/cache/apt/archives/
 #   apt-get --no-download upgrade
-#   /opt/mother-ticker/venv/bin/pip install --no-index --find-links bundle/wheelhouse --upgrade /opt/mother-ticker/src
+#   /opt/mother-ticker/venv/bin/pip install --no-index --find-links bundle/wheelhouse --upgrade /opt/mother-ticker/repo
 set -euo pipefail
 
 [[ $EUID -eq 0 ]] || { echo "run as root (apt needs it)" >&2; exit 1; }
@@ -37,11 +37,11 @@ rm -rf "$work/var/lib/apt/lists/partial" "$work/var/lib/apt/lists/lock"
 
 echo "==> building the Python wheelhouse"
 mkdir -p "$work/wheelhouse"
-src=/opt/mother-ticker/src
+src=/opt/mother-ticker/repo
 if [[ -f $src/pyproject.toml ]]; then
     /opt/mother-ticker/venv/bin/pip download --quiet --dest "$work/wheelhouse" "$src"
 else
-    echo "    /opt/mother-ticker/src not found; skipping wheelhouse" >&2
+    echo "    /opt/mother-ticker/repo not found; skipping wheelhouse" >&2
 fi
 
 mkdir -p "$out"
