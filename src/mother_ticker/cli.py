@@ -7,6 +7,7 @@ mother-ticker status         one-shot text status, useful over a bad link
 mother-ticker exporter       run the metrics writer chosen by the site config
 mother-ticker healthcheck    one tick of the escalation ladder (systemd timer)
 mother-ticker metrics        print the Prometheus rendering once and exit
+mother-ticker fake-gpsd      a pretend receiver for the bench before the HAT arrives
 mother-ticker --version
 """
 
@@ -208,6 +209,38 @@ def cmd_check_updates(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_fake_gpsd(args: argparse.Namespace) -> int:
+    from mother_ticker.bench.fake_gpsd import FakeGpsd
+
+    try:
+        server = FakeGpsd(
+            host=args.bind,
+            port=args.port,
+            scenario=args.scenario,
+            satellites_used=args.satellites,
+            interval_s=args.interval,
+        )
+    except OSError as exc:
+        print(
+            f"fake-gpsd: cannot listen on {args.bind}:{args.port}: {exc}\n"
+            "If the real gpsd holds the port: sudo systemctl stop gpsd.socket gpsd.service",
+            file=sys.stderr,
+        )
+        return 1
+    print(
+        f"fake-gpsd: {args.scenario} with {args.satellites} satellites used on "
+        f"{server.host}:{server.port}; no PPS, no SHM, chrony is not fooled. Ctrl+C stops.",
+        file=sys.stderr,
+    )
+    try:
+        server.serve_forever()
+    except KeyboardInterrupt:
+        pass
+    finally:
+        server.stop()
+    return 0
+
+
 def cmd_healthcheck(args: argparse.Namespace) -> int:
     from mother_ticker.collectors.gather import gather
     from mother_ticker.health.check import run_check
@@ -254,6 +287,18 @@ def build_parser() -> argparse.ArgumentParser:
         "--no-refresh", action="store_true", help="count from the existing apt lists only"
     )
     cu.set_defaults(func=cmd_check_updates)
+    fg = sub.add_parser("fake-gpsd", help="pretend receiver for benching without the HAT")
+    fg.add_argument("--bind", default="127.0.0.1", help="address to listen on")
+    fg.add_argument("--port", type=int, default=2947, help="port to listen on (gpsd's is 2947)")
+    fg.add_argument(
+        "--scenario",
+        choices=["3dfix", "2dfix", "nofix", "silent"],
+        default="3dfix",
+        help="what the receiver reports; silent answers but never reports a sky",
+    )
+    fg.add_argument("--satellites", type=int, default=9, help="satellites in the solution")
+    fg.add_argument("--interval", type=float, default=1.0, help="seconds between reports")
+    fg.set_defaults(func=cmd_fake_gpsd)
     hc = sub.add_parser("healthcheck", help="one tick of the escalation ladder")
     hc.add_argument("--dry-run", action="store_true", help="decide but do not restart or reboot")
     hc.set_defaults(func=cmd_healthcheck)

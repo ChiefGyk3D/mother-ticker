@@ -213,6 +213,26 @@ overwriting an existing one). So a unit deployed from a controller can later
 be re-provisioned, or switched between modes, from its own shell with no
 controller in reach.
 
+## Testing before the HAT arrives
+
+Most of the appliance has nothing to do with the GPS board. With a bare Pi 4
+you can already test both deploy paths, the console TUI on the DSI panel,
+admin login, sshd and fail2ban, nftables, the exporter and the syslog relay,
+the update check, the overlay and maintenance mode. Set
+`mother_ticker_hardware_present: false` (Ansible) or `HARDWARE_PRESENT=no`
+(`install.conf`), deploy, and the role skips the PPS, RTC and UART checks,
+leaves the GNSS policy unit disabled, and stops the health ladder rebooting a
+unit that can never get a fix. The dashboard shows the missing hardware as
+critical, which is the truth. When the board is fitted, set it back to true
+and re-run; the boot configuration was already applied, so only the checks
+and the GNSS unit change.
+
+A pretend receiver covers the rest: `mother-ticker fake-gpsd` listens where
+gpsd would and streams a 3D fix (or `--scenario nofix`), so the GNSS screen,
+the gpsd collector and the health ladder run against real sockets. It
+produces no PPS, so chrony stays critical, as it should. `docs/bench.md` is
+the checklist for this pass and for the one after the board arrives.
+
 ## Per-site deployment
 
 The isolated unit has no internet, so it is **built on a network that has
@@ -349,6 +369,9 @@ important ones:
     - targets: ["ntp-main:9101"]
 ```
 
+`grafana/` has the alert rules, a generated dashboard and a provisioning
+file for the scraper side; `grafana/README.md` says how to load each.
+
 **malware-net**: one syslog message per interval (15 s by default) to the
 relay, RFC 5424 with a structured-data element and a JSON body. Severity
 follows the health level (informational, warning, critical), so a SIEM can
@@ -402,7 +425,9 @@ through either, and where Patch Gremlin fits.
 |---|---|
 | `ARCHITECTURE.md` | how chrony, gpsd, PPS and the RTC relate; TUI data flow; metrics paths per site; the health ladder |
 | `RUNBOOK.md` | what a lost fix, a dead PPS and a desynchronised chrony look like, how to diagnose and recover each, and the other failure modes |
+| `docs/bench.md` | the bench checklist: what to run on a bare Pi now and on the fitted board later, and what to record |
 | `docs/alerts.md` | one-way alerting: metrics, syslog, webhook to n8n or ntfy, Grafana rules, email, Patch Gremlin |
+| `grafana/README.md` | the alert rules, dashboard and provisioning file for the Prometheus and Grafana host |
 | `docs/nts.md` | enabling Network Time Security for clients that support it |
 | `docs/offline-updates.md` | pre-staging and WAN-window procedures for the isolated unit |
 | `SECURITY.md` | reporting a vulnerability, what is in scope, the hardening in place |

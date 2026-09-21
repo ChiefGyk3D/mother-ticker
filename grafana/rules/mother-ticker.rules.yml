@@ -1,0 +1,155 @@
+---
+# Alert rules for the main-LAN unit, in Prometheus rule format.
+#
+# Load them into Prometheus (`rule_files:`), into a Mimir or Thanos ruler, or
+# into Grafana with "Import to Grafana-managed rules" (Alerting > Alert rules,
+# Grafana 11.4 or newer). Every expression names a metric the exporter serves;
+# tests/test_grafana.py checks that against the code, and docs/alerts.md
+# lists these rules by name, which the same test keeps in step.
+#
+# `for` durations are deliberate. PPS takes minutes to be trusted after a
+# cold start and a receiver loses a fix for seconds under a passing cloud
+# of interference; the unit's own health ladder handles the short stuff.
+groups:
+  - name: mother-ticker
+    rules:
+      - alert: MotherTickerScrapeDown
+        expr: up{job="mother-ticker"} == 0
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "{{ $labels.instance }} is not answering the scraper"
+          description: >-
+            The one alert the unit cannot raise about itself. Power, network,
+            nftables (is the scraper in mother_ticker_metrics_allow?) or the
+            exporter service.
+
+      - alert: MotherTickerCritical
+        expr: mother_ticker_health_level >= 2
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "{{ $labels.instance }} time service critical"
+          description: >-
+            PPS silent, no fix, chrony unsynchronised, or gpsd or chronyd down.
+            The unit's banner is red. RUNBOOK.md, in that order.
+
+      - alert: MotherTickerWarning
+        expr: mother_ticker_health_level == 1
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: "{{ $labels.instance }} time service degraded"
+          description: >-
+            Serving from a fallback, few satellites, offset drift or a warm
+            SoC. Not urgent; the unit still serves time.
+
+      - alert: MotherTickerPpsSilent
+        expr: mother_ticker_pps_pulsing == 0 and mother_ticker_pps_present == 1
+        for: 3m
+        labels:
+          severity: critical
+        annotations:
+          summary: "{{ $labels.instance }} PPS stopped pulsing"
+          description: >-
+            The kernel PPS device exists but has not seen an edge. Receiver
+            without a fix, antenna, or the timepulse pin. RUNBOOK.md: PPS not pulsing.
+
+      - alert: MotherTickerNoFix
+        expr: mother_ticker_gnss_fix_mode < 3 and mother_ticker_gpsd_reachable == 1
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "{{ $labels.instance }} has no 3D fix ({{ $value }})"
+          description: >-
+            gpsd answers but the receiver is not in a 3D fix. Sky view, antenna
+            or cold start. RUNBOOK.md: Lost GPS fix.
+
+      - alert: MotherTickerNotStratum1
+        expr: mother_ticker_chrony_stratum != 1 and mother_ticker_chrony_synchronised == 1
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: "{{ $labels.instance }} serving stratum {{ $value }}"
+          description: >-
+            chrony is synchronised but not to PPS: an upstream server or the
+            orphan stratum. Clients still get time, just not the good time.
+
+      - alert: MotherTickerOffset
+        expr: abs(mother_ticker_chrony_system_offset_seconds) > 0.001
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "{{ $labels.instance }} offset {{ $value | humanize }}s"
+          description: >-
+            More than a millisecond from the reference for ten minutes. On PPS
+            this should be tens of nanoseconds. Check which source is selected.
+
+      - alert: MotherTickerHot
+        expr: mother_ticker_soc_temperature_celsius > 75
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "{{ $labels.instance }} SoC at {{ $value }} C"
+          description: >-
+            The Pi throttles at 80 C and the oscillator drifts long before
+            that. Airflow, the case, or the room.
+
+      - alert: MotherTickerServiceRestarting
+        expr: increase(mother_ticker_service_restarts[1h]) >= 3
+        for: 0m
+        labels:
+          severity: warning
+        annotations:
+          summary: "{{ $labels.instance }} {{ $labels.unit }} restarted {{ $value }} times in an hour"
+          description: >-
+            The health ladder is restarting a service that keeps failing, or
+            the service is crash-looping. journalctl -u {{ $labels.unit }}.
+
+      - alert: MotherTickerSecurityUpdates
+        expr: mother_ticker_security_updates_pending > 0
+        for: 1h
+        labels:
+          severity: warning
+        annotations:
+          summary: "{{ $value }} security updates pending on {{ $labels.instance }}"
+          description: >-
+            Nothing installs on its own. docs/offline-updates.md is the
+            procedure; the system screen on the unit lists the packages.
+
+      - alert: MotherTickerRebootRequired
+        expr: mother_ticker_reboot_required == 1
+        for: 1h
+        labels:
+          severity: warning
+        annotations:
+          summary: "{{ $labels.instance }} needs a reboot to finish an update"
+
+      - alert: MotherTickerUpdateCheckStale
+        expr: time() - mother_ticker_updates_checked_timestamp_seconds > 3 * 86400
+        for: 1h
+        labels:
+          severity: warning
+        annotations:
+          summary: "{{ $labels.instance }} has not checked for updates in three days"
+          description: >-
+            mother-ticker-updates.timer is not firing, or the check keeps
+            failing. journalctl -u mother-ticker-updates.
+
+      - alert: MotherTickerAlertsFailing
+        expr: increase(mother_ticker_alerts_failed[1h]) > 0
+        for: 0m
+        labels:
+          severity: warning
+        annotations:
+          summary: "{{ $labels.instance }} webhook alerts are failing"
+          description: >-
+            The exporter could not deliver to mother_ticker_alert_webhook_url.
+            Token file, URL, or the receiver.

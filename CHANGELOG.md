@@ -6,6 +6,28 @@ follows [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- `mother_ticker_hardware_present` / `HARDWARE_PRESENT` for benching a unit
+  before the GPS board is fitted: skips the PPS, RTC and UART checks, leaves
+  the GNSS policy unit disabled, and stops the health ladder rebooting.
+- `mother-ticker fake-gpsd`, a pretend receiver on gpsd's socket (3D fix,
+  2D, no fix or silent) so the collector, the GNSS screen and the health
+  ladder run against real sockets on a unit with no board. No PPS, no SHM;
+  chrony is not fooled.
+- `grafana/`: thirteen alert rules in Prometheus format, a generated
+  dashboard (`scripts/gen_grafana_dashboard.py`) with site and unit
+  variables, and a provisioning file. `docs/alerts.md` now lists the rules
+  from the file instead of carrying a copy.
+- `docs/bench.md`, the checklist for a bare Pi now and the fitted board
+  later, and what to record in the bench-result issue.
+- Tests that render every role template for six unit shapes (both sites,
+  both modes, no board, NTS) and check the result the way its consumer
+  reads it: `config.toml` through the application's loader, `install.conf`
+  back through the installer, nftables, chrony, sshd and sudoers line by
+  line. Tests that every metric the Grafana files name is one the exporter
+  serves.
+
 ## [0.1.0] - 2026-09-21
 
 First cut, **alpha**: tested in CI against recorded gpsd and chrony output and

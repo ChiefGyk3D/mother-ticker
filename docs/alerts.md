@@ -29,44 +29,34 @@ unit has, which is stated on the system screen. Run it by hand with
 ## Main LAN: Grafana alert rules on the scraped metrics (start here)
 
 The exporter serves `/metrics` on 9101 to the Prometheus scraper. This is
-the path that needs nothing new on the unit; the rules below cover it. Grafana's contact points then deliver by email, Slack,
-Discord, Matrix, ntfy, PagerDuty or a webhook, so email lives in Grafana, not
-on the unit.
+the path that needs nothing new on the unit. The rules ship as a file,
+`grafana/rules/mother-ticker.rules.yml`, in Prometheus rule format: load it
+into Prometheus, a ruler, or Grafana 11.4+ with *Import to Grafana-managed
+rules*. `grafana/README.md` has the loading steps and the scrape config;
+`grafana/dashboards/mother-ticker.json` is the matching dashboard. Grafana's
+contact points then deliver by email, Slack, Discord, Matrix, ntfy, PagerDuty
+or a webhook, so email lives in Grafana, not on the unit.
 
-```yaml
-groups:
-  - name: mother-ticker
-    rules:
-      - alert: MotherTickerCritical
-        expr: mother_ticker_health_level >= 2
-        for: 2m
-        labels: {severity: critical}
-        annotations:
-          summary: "{{ $labels.instance }} time service critical"
-      - alert: MotherTickerWarning
-        expr: mother_ticker_health_level == 1
-        for: 15m
-        labels: {severity: warning}
-      - alert: MotherTickerSecurityUpdates
-        expr: mother_ticker_security_updates_pending > 0
-        for: 1h
-        labels: {severity: warning}
-        annotations:
-          summary: "{{ $value }} security updates pending on {{ $labels.instance }}"
-      - alert: MotherTickerRebootRequired
-        expr: mother_ticker_reboot_required == 1
-        for: 1h
-      - alert: MotherTickerUpdateCheckStale
-        expr: time() - mother_ticker_updates_checked_timestamp_seconds > 3 * 86400
-        for: 1h
-      - alert: MotherTickerScrapeDown
-        expr: up{job="mother-ticker"} == 0
-        for: 5m
-        labels: {severity: critical}
-```
+| Rule | Fires when | Severity | Then |
+|---|---|---|---|
+| `MotherTickerScrapeDown` | `up` is 0 for 5 min | critical | Power, network, the scraper's address in `mother_ticker_metrics_allow`, the exporter service |
+| `MotherTickerCritical` | health level 2 for 2 min | critical | The banner is red; `RUNBOOK.md` top to bottom |
+| `MotherTickerWarning` | health level 1 for 15 min | warning | Fallback source, few satellites, drift or a warm SoC |
+| `MotherTickerPpsSilent` | PPS device present, no edge for 3 min | critical | Receiver, antenna, timepulse pin; `RUNBOOK.md` PPS not pulsing |
+| `MotherTickerNoFix` | gpsd answers, fix below 3D for 10 min | warning | Sky view, antenna, cold start; `RUNBOOK.md` Lost GPS fix |
+| `MotherTickerNotStratum1` | synchronised but not stratum 1 for 15 min | warning | Serving from an upstream server or the orphan stratum |
+| `MotherTickerOffset` | more than 1 ms from the reference for 10 min | warning | Which source is selected; NMEA offset |
+| `MotherTickerHot` | SoC above 75 C for 10 min | warning | Airflow, case, room |
+| `MotherTickerServiceRestarting` | 3 or more restarts of a unit in an hour | warning | The ladder or a crash loop; `journalctl -u` the unit |
+| `MotherTickerSecurityUpdates` | security updates pending for 1 h | warning | `docs/offline-updates.md`; the system screen lists them |
+| `MotherTickerRebootRequired` | `/run/reboot-required` for 1 h | warning | Reboot at a quiet moment |
+| `MotherTickerUpdateCheckStale` | no update check for 3 days | warning | `mother-ticker-updates.timer` |
+| `MotherTickerAlertsFailing` | a webhook send failed in the last hour | warning | URL, token file, the receiver |
 
-`ScrapeDown` is the one that fires when the unit itself is gone, which none
-of the unit's own signals can say.
+`MotherTickerScrapeDown` is the one that fires when the unit itself is gone,
+which none of the unit's own signals can say. The test suite checks that
+every metric a rule names is one the exporter serves, and that this table
+and the file name the same rules.
 
 ## Main LAN: the webhook
 

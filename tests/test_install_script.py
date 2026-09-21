@@ -75,6 +75,11 @@ class TestExampleConfig:
         assert hv["mother_ticker_overlay"] is True
         assert hv["mother_ticker_nts_enabled"] is True
 
+    def test_no_hat_flag(self, tmp_path: Path) -> None:
+        result = run("--config", str(EXAMPLE), "--hardware-present", "no", out=tmp_path)
+        assert result.returncode == 0, result.stderr
+        assert load(tmp_path)["mother_ticker_hardware_present"] is False
+
     def test_dev_mode_flag(self, tmp_path: Path) -> None:
         result = run("--config", str(EXAMPLE), "--mode", "dev", out=tmp_path)
         assert result.returncode == 0, result.stderr

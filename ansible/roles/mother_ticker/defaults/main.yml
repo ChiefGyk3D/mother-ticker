@@ -42,6 +42,12 @@ mother_ticker_nts_cert: /etc/mother-ticker/nts/server.crt
 mother_ticker_nts_key: /etc/mother-ticker/nts/server.key
 mother_ticker_nts_port: 4460
 
+# Bench without the HAT: false skips the PPS, RTC and UART checks, leaves the
+# GNSS policy unit disabled and stops the health ladder rebooting a unit that
+# can never reach a fix. Everything else deploys and can be tested. Set it
+# back to true (the default) when the board is fitted and re-run.
+mother_ticker_hardware_present: true
+
 # Hardware: Uputronics GPS/RTC Expansion Board on a Pi 4.
 # Verify the PPS GPIO against the board's documentation before first deploy.
 mother_ticker_pps_gpio: 18
@@ -79,7 +85,7 @@ mother_ticker_syslog_interval_s: 15
 mother_ticker_health_restart_after: 4      # consecutive 30 s ticks
 mother_ticker_health_reboot_after: 40
 mother_ticker_health_min_uptime_s: 1800
-mother_ticker_health_reboot_enabled: true   # both modes: a wedged unit reboots itself
+mother_ticker_health_reboot_enabled: "{{ mother_ticker_hardware_present | bool }}"  # both modes, once the HAT is fitted
 
 # Daily update check and optional one-way alerts. The check never installs
 # anything; it records what a dist-upgrade would do, and the metrics, the

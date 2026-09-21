@@ -43,6 +43,10 @@ RELAY_FRAMING=newline      # newline or octet-counted (TCP only)
 # malware-net: keep serving from the free-running clock if GPS is lost. 0 disables.
 ORPHAN_STRATUM=0
 
+# Bench without the HAT: no skips the PPS, RTC and UART checks and stops the
+# health ladder rebooting. Set yes (default) once the board is fitted and re-run.
+HARDWARE_PRESENT=yes
+
 # Read-only overlay root: auto (follows MODE), yes, or no.
 OVERLAY=auto
 

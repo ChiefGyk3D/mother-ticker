@@ -55,8 +55,8 @@
     mode: "0644"
   notify: Reload systemd
 
-- name: Enable the GNSS configuration unit
+- name: Enable the GNSS configuration unit (only with the receiver fitted)
   ansible.builtin.systemd:
     name: mother-ticker-gnss-config.service
-    enabled: true
+    enabled: "{{ mother_ticker_hardware_present | bool }}"
     daemon_reload: true

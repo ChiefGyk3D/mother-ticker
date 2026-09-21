@@ -32,6 +32,7 @@ usage: mother-ticker-install [options]
   --metrics-port N         --upstream "host ..."
   --relay-host H --relay-port P --relay-transport tcp|udp --relay-framing newline|octet-counted
   --orphan-stratum N       --overlay auto|yes|no     --nts yes|no
+  --hardware-present yes|no   no = bench without the HAT: skip PPS/RTC/UART checks, no reboots
   --nmea-offset SECONDS    --offline yes|no          --wheelhouse DIR
   --alert-webhook-url URL  --alert-format json|ntfy  --alert-ntfy-topic T  --alert-token-file F
   --alert-min-level warning|critical
@@ -47,7 +48,7 @@ USAGE
 die() { echo "mother-ticker-install: $*" >&2; exit 1; }
 
 # Defaults (the role's defaults win for anything left empty).
-SITE=main-lan MODE=appliance OVERLAY=auto NTS=no OFFLINE=no UPSTREAM_SET=0
+SITE=main-lan MODE=appliance OVERLAY=auto NTS=no OFFLINE=no UPSTREAM_SET=0 HARDWARE_PRESENT=yes
 ADMIN_USER='' HOSTNAME_SET='' NTP_ALLOW='' MGMT_ALLOW='' METRICS_ALLOW='' METRICS_PORT=''
 UPSTREAM_NTP='' RELAY_HOST='' RELAY_PORT='' RELAY_TRANSPORT='' RELAY_FRAMING='' ORPHAN_STRATUM=''
 NMEA_OFFSET='' WHEELHOUSE='' EXTRA_VARS_FILE='' REPO_DIR=''
@@ -69,6 +70,7 @@ load_conf() {
         case $key in
             SITE) SITE=$val ;;
             MODE) MODE=$val ;;
+            HARDWARE_PRESENT) HARDWARE_PRESENT=$val ;;
             ADMIN_USER) ADMIN_USER=$val ;;
             HOSTNAME) HOSTNAME_SET=$val ;;
             NTP_ALLOW) NTP_ALLOW=$val ;;
@@ -113,6 +115,7 @@ while [[ $# -gt 0 ]]; do
         --config) shift ;;
         --site) SITE=$2; shift ;;
         --mode) MODE=$2; shift ;;
+        --hardware-present) HARDWARE_PRESENT=$2; shift ;;
         --hostname) HOSTNAME_SET=$2; shift ;;
         --admin-user) ADMIN_USER=$2; shift ;;
         --ntp-allow) NTP_ALLOW=$2; shift ;;
@@ -150,6 +153,7 @@ done
 case $SITE in main-lan|malware-net) ;; *) die "SITE must be main-lan or malware-net (got '$SITE')" ;; esac
 case $MODE in appliance|dev) ;; *) die "MODE must be appliance or dev (got '$MODE')" ;; esac
 case $OVERLAY in auto|yes|no) ;; *) die "OVERLAY must be auto, yes or no" ;; esac
+case $HARDWARE_PRESENT in yes|no) ;; *) die "HARDWARE_PRESENT must be yes or no" ;; esac
 case $NTS in yes|no) ;; *) die "NTS must be yes or no" ;; esac
 case $OFFLINE in yes|no) ;; *) die "OFFLINE must be yes or no" ;; esac
 [[ -n $ADMIN_USER ]] || die "ADMIN_USER is required (the account Raspberry Pi Imager created)"
@@ -199,6 +203,7 @@ write_inventory() {
         [[ -n $ORPHAN_STRATUM ]] && echo "      mother_ticker_orphan_stratum: $ORPHAN_STRATUM"
         [[ $OVERLAY == yes ]] && echo "      mother_ticker_overlay: true"
         [[ $OVERLAY == no ]] && echo "      mother_ticker_overlay: false"
+        [[ $HARDWARE_PRESENT == no ]] && echo "      mother_ticker_hardware_present: false"
         [[ -n $NMEA_OFFSET ]] && echo "      mother_ticker_nmea_offset: $NMEA_OFFSET"
         [[ $NTS == yes ]] && echo "      mother_ticker_nts_enabled: true"
         [[ $OFFLINE == yes ]] && echo "      mother_ticker_offline: true"
@@ -261,6 +266,7 @@ if [[ $conf_file != "$CONF_DEFAULT" ]]; then
         echo "RELAY_FRAMING=$RELAY_FRAMING"
         echo "ORPHAN_STRATUM=$ORPHAN_STRATUM"
         echo "OVERLAY=$OVERLAY"
+        echo "HARDWARE_PRESENT=$HARDWARE_PRESENT"
         echo "NMEA_OFFSET=$NMEA_OFFSET"
         echo "NTS=$NTS"
         echo "OFFLINE=$OFFLINE"
