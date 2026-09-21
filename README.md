@@ -31,6 +31,7 @@ the bench before trusting a unit in production.
 - [Deploying with Ansible from a controller](#deploying-with-ansible-from-a-controller)
 - [Per-site deployment](#per-site-deployment)
 - [Using the TUI](#using-the-tui)
+- [Screenshots](#screenshots)
 - [Metrics](#metrics)
 - [Updates](#updates)
 - [Documentation map](#documentation-map)
@@ -233,7 +234,55 @@ Your admin account keeps a normal shell.
   for the admin user, and `ssh admin@unit` always gives a shell.
 
 The Linux console has 16 colours and no mouse; the TUI is designed for that
-and looks the same over SSH.
+and looks the same over SSH. The big clock is drawn with coloured cells
+rather than glyphs, and every icon is plain ASCII, so the stock console font
+renders all of it.
+
+**Try it without hardware:** `mother-ticker tui --demo` runs the whole
+interface with fabricated data on any Linux or macOS terminal.
+`--demo warning` and `--demo critical` show the fault states.
+
+## Screenshots
+
+Rendered headless from the demo data by `make screenshots`, so what is shown
+is what the code draws, at the 7 inch panel's 100x30 cells.
+
+**Dashboard, all systems nominal**
+
+![dashboard](docs/images/dashboard.svg)
+
+**Dashboard, warning: GPS lost, serving stratum 2 from a public server, SoC warm**
+
+![dashboard warning](docs/images/dashboard-warning.svg)
+
+**Dashboard, critical: no PPS, no fix, chrony unsynchronised** (the banner
+blinks; this is its steady half)
+
+![dashboard critical](docs/images/dashboard-critical.svg)
+
+**Menu**
+
+![menu](docs/images/menu.svg)
+
+**GNSS detail**
+
+![gnss detail](docs/images/gnss.svg)
+
+**chrony detail**
+
+![chrony detail](docs/images/chrony.svg)
+
+**Services**
+
+![services](docs/images/services.svg)
+
+**System**
+
+![system](docs/images/system.svg)
+
+**About**
+
+![about](docs/images/about.svg)
 
 ## Metrics
 

@@ -26,8 +26,10 @@ headless; not yet run on the target hardware.
   isolated unit.
 - Site flag (`main-lan` or `malware-net`) selecting chrony sources and orphan
   mode, allowed subnets, the metrics path, apt timers and the overlay.
-- Textual TUI with a passive dashboard (clock, GNSS, chrony, PPS, network,
-  version) and a flashing warning banner, and a two-level menu: GNSS
+- Textual TUI with a passive dashboard (a big clock drawn in coloured cells,
+  ASCII icons for GNSS, chrony, PPS and network, version) and a flashing
+  warning banner, an About screen with the project logo in ASCII, a demo mode
+  (`tui --demo`) that needs no hardware, and screenshots rendered from it, and a two-level menu: GNSS
   satellites, chrony tracking and sources, service restarts and journals with
   confirmation, network, system, maintenance, drop to shell. Runs on tty1 and
   over SSH.

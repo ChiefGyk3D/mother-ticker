@@ -10,6 +10,7 @@
 from __future__ import annotations
 
 import re
+import runpy
 import subprocess
 from pathlib import Path
 
@@ -124,6 +125,30 @@ class TestVersionAgreement:
             check=False,
         )
         assert result.returncode == 0, result.stderr
+
+
+class TestScreenshots:
+    """README screenshots come from scripts/render_screenshots.py; both directions must agree."""
+
+    def test_docs_reference_existing_images(self) -> None:
+        missing = []
+        for doc in [ROOT / "README.md", *(ROOT / "docs").glob("*.md")]:
+            for ref in re.findall(
+                r"\]\(((?:docs/images|media)/[^)\s]+)\)", doc.read_text(encoding="utf-8")
+            ):
+                if not (ROOT / ref).exists():
+                    missing.append(f"{doc.name}: {ref}")
+        assert not missing, "referenced image missing:\n" + "\n".join(missing)
+
+    def test_every_generated_screenshot_is_shown(self) -> None:
+        shots = runpy.run_path(str(ROOT / "scripts/render_screenshots.py"))["SHOTS"]
+        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        unshown = [name for name in shots if f"docs/images/{name}.svg" not in readme]
+        assert not unshown, f"screenshots generated but not in README: {unshown}"
+        for name in shots:
+            assert (ROOT / "docs/images" / f"{name}.svg").exists(), (
+                f"docs/images/{name}.svg missing; run make screenshots"
+            )
 
 
 class TestWorkflows:

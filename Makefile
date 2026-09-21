@@ -3,7 +3,7 @@ PY ?= python3
 VENV ?= .venv
 BIN := $(VENV)/bin
 
-.PHONY: venv check lint type test security yaml ansible shell hygiene format clean
+.PHONY: venv check lint type test security yaml ansible shell hygiene format clean screenshots
 
 venv:
 	$(PY) -m venv $(VENV)
@@ -43,3 +43,7 @@ hygiene:
 
 clean:
 	rm -rf build dist *.egg-info .mypy_cache .ruff_cache .pytest_cache
+
+# Screenshots for the README come from the demo app, never by hand.
+screenshots:
+	$(BIN)/python scripts/render_screenshots.py docs/images

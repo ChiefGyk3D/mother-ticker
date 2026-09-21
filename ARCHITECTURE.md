@@ -104,7 +104,12 @@ input.
 (TERM=linux, 16 colours, keyboard only) and over SSH. Textual renders to
 whatever the terminal offers, so the stylesheet uses the ANSI palette and the
 warning state is expressed as colour plus blinking inverse, which survives a
-16-colour console.
+16-colour console. The big clock is made of spaces with a background colour
+rather than block or box-drawing glyphs, because the stock console font
+carries neither reliably and a coloured cell needs no glyph at all. The panel
+icons and the logo on the About screen are plain ASCII for the same reason.
+`tui --demo` runs the app on fabricated data; the README screenshots are
+rendered from it by `scripts/render_screenshots.py`.
 
 **Memory on a 1 GB Pi.** The TUI (Textual plus the collector) sits around
 60 to 80 MB; the exporter is a stdlib HTTP server capped at 96 MB by its unit;

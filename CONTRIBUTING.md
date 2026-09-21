@@ -61,10 +61,15 @@ You can run the TUI on any Linux machine without the hardware:
   no real gpsd, chronyd or sysfs. Fake daemons on loopback are fine.
 - Every bug fix gets a regression test whose docstring states the failure it
   prevents.
-- The TUI is tested with Textual's pilot in a headless terminal. If you change
-  what the dashboard looks like, also run the render script in
-  `tests/test_tui.py`'s style (or `textual run --dev`) and look at it; tests
-  pass on things that are visibly wrong.
+- The TUI is tested with Textual's pilot in a headless terminal. **Any change
+  that alters what the TUI looks like regenerates the screenshots in the same
+  pull request**: `make screenshots` renders `docs/images/*.svg` from the demo
+  data, and the hygiene test checks that every generated screenshot is in the
+  README. Then look at them. Tests pass on things that are visibly wrong; the
+  first cut of the big clock passed every test and was torn in half by
+  centre alignment until somebody rasterised the SVG and looked.
+- `mother-ticker tui --demo [warning|critical]` runs the TUI with fabricated
+  data on your own machine.
 - A check must be falsifiable: break the thing it watches and confirm it goes
   red with a useful message before trusting it.
 
