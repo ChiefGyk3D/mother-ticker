@@ -3,6 +3,7 @@
 > Go sync with that NTP Mother Ticker.
 
 ![version](https://img.shields.io/badge/version-0.1.0-blue)
+![status](https://img.shields.io/badge/status-alpha-orange)
 [![CI](https://github.com/ChiefGyk3D/mother-ticker/actions/workflows/ci.yml/badge.svg)](https://github.com/ChiefGyk3D/mother-ticker/actions/workflows/ci.yml)
 ![licence](https://img.shields.io/badge/licence-AGPL--3.0--or--later-green)
 
@@ -16,10 +17,13 @@ Two units, one codebase. A single `site` flag (`main-lan` or `malware-net`)
 decides the handful of things that differ: who may query, where metrics go,
 whether the root filesystem is a read-only overlay.
 
-**Status: 0.1.0, first cut.** Everything here is tested in CI against recorded
-gpsd and chrony output and rendered headless. It has not yet run on the target
-hardware. Items marked *verify on hardware* below are the ones to confirm on
-the bench before trusting a unit in production.
+**Status: 0.1.0 alpha.** Everything here is tested in CI against recorded gpsd
+and chrony output and rendered headless. It has not yet run on the target
+hardware, and it stays alpha until it has: the items marked *verify on
+hardware* below are what closes that. The running version and its lifecycle
+label are in `mother-ticker --version`, the TUI's footer and About screen,
+`CHANGELOG.md`, and the git tag; see `CONTRIBUTING.md` for the release
+process.
 
 ## Contents
 

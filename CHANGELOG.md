@@ -8,8 +8,9 @@ follows [Semantic Versioning](https://semver.org/).
 
 ## [0.1.0] - 2026-09-21
 
-First cut. Tested in CI against recorded gpsd and chrony output and rendered
-headless; not yet run on the target hardware.
+First cut, **alpha**: tested in CI against recorded gpsd and chrony output and
+rendered headless; not yet run on the target hardware. The lifecycle label
+lives in `src/mother_ticker/version.py` beside the version.
 
 ### Added
 

@@ -5,6 +5,6 @@
 Go sync with that NTP Mother Ticker.
 """
 
-from mother_ticker.version import __version__
+from mother_ticker.version import __status__, __version__
 
-__all__ = ["__version__"]
+__all__ = ["__status__", "__version__"]

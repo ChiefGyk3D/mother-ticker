@@ -7,3 +7,7 @@ The README badge, CHANGELOG headings and git tags must agree with this value.
 """
 
 __version__ = "0.1.0"
+
+# Lifecycle label shown beside the version. "alpha" until a unit has run on real hardware
+# and the README's verify-on-hardware items are closed; then "beta"; then "" at 1.0.
+__status__ = "alpha"

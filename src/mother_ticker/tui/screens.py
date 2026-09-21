@@ -28,7 +28,7 @@ from mother_ticker.tui.format import (
 )
 from mother_ticker.tui.messages import SnapshotUpdated
 from mother_ticker.tui.widgets import BigClock, IconPanel
-from mother_ticker.version import __version__
+from mother_ticker.version import __status__, __version__
 
 if TYPE_CHECKING:
     from mother_ticker.tui.app import MotherTickerApp
@@ -147,6 +147,7 @@ class DashboardScreen(Screen[None]):
         panel("#panel-net", "network", network_panel(snap.network, snap.system.hostname))
         self.query_one("#footer-right", Static).update(
             f"{snap.system.hostname}    site {snap.site}    v{snap.version}"
+            + (f" {__status__}" if __status__ else "")
         )
 
 
@@ -488,7 +489,7 @@ class AboutScreen(_Base):
         cfg = self.mt_app.config
         return "\n".join(
             [
-                f"version {__version__}    site {cfg.site}",
+                f"version {__version__}{' ' + __status__ if __status__ else ''}    site {cfg.site}",
                 "",
                 "GPS-disciplined stratum-1 NTP appliance",
                 "chrony + gpsd + kernel PPS + RV-3028 RTC",

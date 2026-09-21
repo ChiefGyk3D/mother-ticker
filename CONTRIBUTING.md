@@ -134,8 +134,10 @@ a separate thing from attribution, and neither replaces the other.
 ## Releases
 
 Semantic Versioning. `src/mother_ticker/version.py` is the single source of
-truth; the README badge and the CHANGELOG heading must agree, and the hygiene
-test checks that they do.
+truth for the version and for the lifecycle label (`__status__`: alpha until
+a unit has run on real hardware, beta until the runbook's states have each
+been seen on the bench, empty at 1.0); the README badges and the CHANGELOG
+heading must agree, and the hygiene test checks the version does.
 
 ```sh
 scripts/release.sh 0.2.0     # bumps version.py and the badge, rolls Unreleased, commits, tags

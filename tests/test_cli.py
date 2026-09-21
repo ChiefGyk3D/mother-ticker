@@ -11,7 +11,7 @@ import pytest
 import mother_ticker.collectors.gather as gather_mod
 from mother_ticker import cli
 from mother_ticker.config import ConfigError, config_from_dict, load_config
-from mother_ticker.version import __version__
+from mother_ticker.version import __status__, __version__
 from tests.conftest import make_snapshot
 
 
@@ -20,7 +20,8 @@ class TestVersion:
         with pytest.raises(SystemExit) as exc:
             cli.main(["--version"])
         assert exc.value.code == 0
-        assert capsys.readouterr().out.strip() == f"mother-ticker {__version__}"
+        expected = f"mother-ticker {__version__}" + (f" ({__status__})" if __status__ else "")
+        assert capsys.readouterr().out.strip() == expected
 
     def test_semver_shape(self) -> None:
         major, minor, patch = __version__.split(".")

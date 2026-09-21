@@ -22,7 +22,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from mother_ticker.config import Config, ConfigError, load_config
-from mother_ticker.version import __version__
+from mother_ticker.version import __status__, __version__
 
 if TYPE_CHECKING:
     from mother_ticker.tui.app import MotherTickerApp
@@ -69,7 +69,8 @@ def cmd_status(args: argparse.Namespace) -> int:
     report = evaluate(snap, config.health.thresholds)
     t = snap.chrony.tracking
     lines = [
-        f"Mother Ticker {__version__}  site={snap.site}  host={snap.system.hostname}",
+        f"Mother Ticker {__version__}{' ' + __status__ if __status__ else ''}"
+        f"  site={snap.site}  host={snap.system.hostname}",
         f"health : {report.level.name}  {report.headline}",
         f"gnss   : {snap.gnss.fix_label}  used {snap.gnss.satellites_used}"
         f"/{snap.gnss.satellites_seen}",
@@ -179,7 +180,11 @@ def build_parser() -> argparse.ArgumentParser:
             "GPS-disciplined stratum-1 NTP appliance: status TUI, metrics exporter, health check."
         ),
     )
-    parser.add_argument("--version", action="version", version=f"mother-ticker {__version__}")
+    parser.add_argument(
+        "--version",
+        action="version",
+        version=f"mother-ticker {__version__}" + (f" ({__status__})" if __status__ else ""),
+    )
     parser.add_argument(
         "-c", "--config", help="config file (default /etc/mother-ticker/config.toml)"
     )
