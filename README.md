@@ -27,18 +27,20 @@ the bench before trusting a unit in production.
 - [Hardware](#hardware)
 - [Wiring and assembly](#wiring-and-assembly)
 - [OS imaging](#os-imaging)
-- [Deploying with Ansible](#deploying-with-ansible)
+- [Deploying from a shell on the unit](#deploying-from-a-shell-on-the-unit)
+- [Deploying with Ansible from a controller](#deploying-with-ansible-from-a-controller)
 - [Per-site deployment](#per-site-deployment)
 - [Using the TUI](#using-the-tui)
 - [Metrics](#metrics)
 - [Updates](#updates)
 - [Documentation map](#documentation-map)
+- [Support this project](#-support-this-project)
 
 ## What you get
 
 | Piece | What it does |
 |---|---|
-| `ansible/` | One role that turns Raspberry Pi OS Lite into the appliance: boot overlays, UART, gpsd, GNSS policy, chrony, RTC, nftables, sshd, fail2ban, watchdog, the TUI user and services, and the read-only overlay on the isolated unit. |
+| `ansible/`, `scripts/install.sh` | One role that turns Raspberry Pi OS Lite into the appliance, driven either from a shell on the unit (`mother-ticker-install`, one box, nothing to learn) or from a controller with Ansible (several boxes): boot overlays, UART, gpsd, GNSS policy, chrony, RTC, nftables, sshd, fail2ban, watchdog, the TUI user and services, and the read-only overlay on the isolated unit. |
 | `mother-ticker tui` | Textual TUI. Dashboard with clock, GNSS, chrony, PPS and network panels and a flashing banner on any fault. Any key opens a shallow menu: satellites, `chronyc` output, service restarts with confirmation, journal tails, network and system detail, maintenance. Same on tty1 and over SSH. |
 | `mother-ticker exporter` | Prometheus `/metrics` on the main LAN; RFC 5424 syslog with a JSON body toward the one-way relay on the malware net. Same metric names on both. |
 | `mother-ticker healthcheck` | Every 30 s from a systemd timer: evaluates health, restarts gpsd or chronyd after sustained faults a restart can fix, reboots after prolonged criticality with a boot-loop guard. The BCM2711 hardware watchdog backs it up. |
@@ -95,12 +97,45 @@ warns at 70 and shows critical at 80, which is where the firmware throttles.
 
 That is all the manual work on the unit. Everything else is the role.
 
-## Deploying with Ansible
+## Deploying from a shell on the unit
 
-Ansible runs on your laptop or an admin box (the controller) and configures the
-unit over SSH. If you have never used it: it is a list of steps in YAML, each
-of which checks the current state and changes only what differs, so re-running
-is always safe.
+One unit, no controller: everything runs on the Pi itself. The installer is a
+shell script that reads a small config file, writes a one-host inventory, pulls
+`ansible-core` from apt if it is missing, and runs the same role a controller
+would, locally. There is one implementation of the appliance; this is just the
+short way to drive it.
+
+```sh
+ssh admin@ntp-main
+git clone https://github.com/ChiefGyk3D/mother-ticker
+cd mother-ticker
+cp install.conf.example install.conf
+nano install.conf                      # site, subnets, relay, admin user
+sudo scripts/install.sh --config install.conf
+```
+
+The config is `KEY=VALUE`, one per line, documented inline in
+`install.conf.example`. Flags override it (`--site`, `--ntp-allow`,
+`--relay-host`, `--tags`, `--check`, and the rest under `--help`). The
+effective config is saved to `/etc/mother-ticker/install.conf`, and the role
+installs the script as `mother-ticker-install`, so from then on:
+
+```sh
+sudo nano /etc/mother-ticker/install.conf   # change something
+sudo mother-ticker-install                  # re-run; safe, changes only what differs
+sudo mother-ticker-install --tags chrony    # or just one part
+sudo mother-ticker-install --check          # or see what would change
+```
+
+What the run does is the same list as the Ansible section below, ending in one
+reboot if boot configuration changed and a verification pass.
+
+## Deploying with Ansible from a controller
+
+Several units, or you already run Ansible: drive them from your laptop or an
+admin box over SSH. If you have never used it: it is a list of steps in YAML,
+each of which checks the current state and changes only what differs, so
+re-running is always safe.
 
 ```sh
 git clone https://github.com/ChiefGyk3D/mother-ticker
@@ -124,7 +159,8 @@ cd ansible
 ../.venv/bin/ansible-playbook site.yml -l ntp-main
 ```
 
-What happens, in order (each is a tag you can run alone with `-t`):
+What happens, in order (each is a tag you can run alone with `-t`, from either
+path):
 
 1. `preflight`: refuses an overlay root, a non-Debian OS, or a missing admin user.
 2. `packages`: chrony, gpsd, pps-tools, nftables, fail2ban and friends; removes
@@ -148,8 +184,9 @@ The isolated unit has no internet, so it is **built on a network that has
 some** and moved afterwards:
 
 1. Image and boot it on the main LAN or a bench network with internet.
-2. Deploy it with its own host_vars (`mother_ticker_site: malware-net`). The
-   play installs packages from the internet, configures everything for the
+2. Deploy it as `malware-net`: `SITE=malware-net` in `install.conf` on the
+   unit, or its own host_vars from a controller. The run installs packages
+   from the internet, configures everything for the
    malware net (its subnets, the relay, orphan mode, no upstream servers) and
    ends by enabling the read-only overlay.
 3. Power down, move it to the malware net, power up. Nothing on it needs the
@@ -166,9 +203,9 @@ Everything site-specific comes from the site flag or host_vars:
 | apt timers | as shipped | masked |
 | Journal | persistent, capped | volatile |
 
-Re-running the play against the isolated unit later needs maintenance mode
-first (overlay off) and a management-network path for Ansible; see
-`docs/offline-updates.md`.
+Re-running against the isolated unit later needs maintenance mode first
+(overlay off); from the unit itself that is `sudo mother-ticker-install`, from
+a controller it needs a management-network path. See `docs/offline-updates.md`.
 
 ## Using the TUI
 
@@ -234,8 +271,8 @@ host_vars. `mother_ticker_relay_send_failures` counts sends the relay refused.
 
 ## Updates
 
-- Main LAN: maintenance is ordinary `apt`. Re-run the play after pulling a new
-  release to update the application.
+- Main LAN: maintenance is ordinary `apt`. Pull a new release and re-run
+  `mother-ticker-install` (or the play) to update the application.
 - Malware net: see `docs/offline-updates.md`. Short version: put the unit in
   maintenance mode (overlay off, reboot), update during a WAN window or from a
   bundle built on the main-LAN unit with `scripts/stage-offline-bundle.sh`,
@@ -250,11 +287,92 @@ host_vars. `mother_ticker_relay_send_failures` counts sends the relay refused.
 | `docs/nts.md` | enabling Network Time Security for clients that support it |
 | `docs/offline-updates.md` | pre-staging and WAN-window procedures for the isolated unit |
 | `SECURITY.md` | reporting a vulnerability, what is in scope, the hardening in place |
-| `CONTRIBUTING.md` | development setup, conventions, testing, release process |
+| `CONTRIBUTING.md` | development setup, conventions, testing, release process, and that you keep your copyright |
 | `CHANGELOG.md` | Keep a Changelog, SemVer |
 
 ## Licence
 
-AGPL-3.0-or-later. Copyright (C) 2026 Renegade Penguin LLC. See `LICENSE` and
-`NOTICE`. If you run a modified Mother Ticker as a network service, section 13
-of the AGPL asks you to offer its source to that service's users.
+AGPL-3.0-or-later. See `LICENSE` and `NOTICE`. If you run a modified Mother
+Ticker as a network service, section 13 of the AGPL asks you to offer its
+source to that service's users.
+
+---
+
+Copyright (C) 2026 Renegade Penguin LLC. Mother Ticker is free software under
+AGPL-3.0-or-later. There is [no CLA](CONTRIBUTING.md#you-keep-your-copyright).
+
+---
+
+## 💝 Support This Project
+
+If you find Mother Ticker useful, consider supporting continued development.
+Everything is also collected at **[support.chiefgyk3d.com](https://support.chiefgyk3d.com)**.
+
+### Recurring Support
+
+<div align="center">
+<table>
+  <tr>
+    <td align="center" width="150">
+      <a href="https://patreon.com/chiefgyk3d" title="Patreon">
+        <img src="media/icons/patreon.svg" width="36" height="36" alt="Patreon"><br>
+        <sub><b>Patreon</b></sub>
+      </a>
+    </td>
+    <td align="center" width="150">
+      <a href="https://streamelements.com/chiefgyk3d/tip" title="StreamElements">
+        <img src="media/streamelements.png" width="36" height="36" alt="StreamElements"><br>
+        <sub><b>StreamElements</b></sub>
+      </a>
+    </td>
+    <td align="center" width="150">
+      <a href="https://shop.chiefgyk3d.com/" title="Merch Store">
+        <img src="media/icons/merch.svg" width="36" height="36" alt="Merch"><br>
+        <sub><b>Merch Store</b></sub>
+      </a>
+    </td>
+  </tr>
+</table>
+</div>
+
+### Cryptocurrency Tips
+
+<div align="center">
+<table>
+  <tr>
+    <td><img src="media/icons/bitcoin.svg" width="28" height="28" alt="Bitcoin">&nbsp;<b>Bitcoin</b><br><code>bc1qztdzcy2wyavj2tsuandu4p0tcklzttvdnzalla</code></td>
+  </tr>
+  <tr>
+    <td><img src="media/icons/monero.svg" width="28" height="28" alt="Monero">&nbsp;<b>Monero</b><br><code>84Y34QubRwQYK2HNviezeH9r6aRcPvgWmKtDkN3EwiuVbp6sNLhm9ffRgs6BA9X1n9jY7wEN16ZEpiEngZbecXseUrW8SeQ</code></td>
+  </tr>
+  <tr>
+    <td><img src="media/icons/ethereum.svg" width="28" height="28" alt="Ethereum">&nbsp;<b>Ethereum</b><br><code>0x554f18cfB684889c3A60219BDBE7b050C39335ED</code></td>
+  </tr>
+  <tr>
+    <td><img src="media/icons/solana.svg" width="28" height="28" alt="Solana">&nbsp;<b>Solana</b><br><code>5T8h3HbyvHgLxwXgchRYbHSqRjZyAr8J7uwjLN9Fh8Jh</code></td>
+  </tr>
+</table>
+</div>
+
+---
+
+## 👤 Author & Socials
+
+<div align="center">
+<table>
+  <tr>
+    <td align="center" width="90"><a href="https://social.chiefgyk3d.com/@chiefgyk3d" title="Mastodon"><img src="media/icons/mastodon.svg" width="30" height="30" alt="Mastodon"><br><sub>Mastodon</sub></a></td>
+    <td align="center" width="90"><a href="https://bsky.app/profile/chiefgyk3d.com" title="Bluesky"><img src="media/icons/bluesky.svg" width="30" height="30" alt="Bluesky"><br><sub>Bluesky</sub></a></td>
+    <td align="center" width="90"><a href="https://twitch.tv/chiefgyk3d" title="Twitch"><img src="media/icons/twitch.svg" width="30" height="30" alt="Twitch"><br><sub>Twitch</sub></a></td>
+    <td align="center" width="90"><a href="https://www.youtube.com/channel/UCvFY4KyqVBuYd7JAl3NRyiQ" title="YouTube"><img src="media/icons/youtube.svg" width="30" height="30" alt="YouTube"><br><sub>YouTube</sub></a></td>
+    <td align="center" width="90"><a href="https://kick.com/chiefgyk3d" title="Kick"><img src="media/icons/kick.svg" width="30" height="30" alt="Kick"><br><sub>Kick</sub></a></td>
+    <td align="center" width="90"><a href="https://www.tiktok.com/@chiefgyk3d" title="TikTok"><img src="media/icons/tiktok.svg" width="30" height="30" alt="TikTok"><br><sub>TikTok</sub></a></td>
+    <td align="center" width="90"><a href="https://www.instagram.com/chiefgyk3d" title="Instagram"><img src="media/icons/instagram.svg" width="30" height="30" alt="Instagram"><br><sub>Instagram</sub></a></td>
+    <td align="center" width="90"><a href="https://www.threads.net/@chiefgyk3d" title="Threads"><img src="media/icons/threads.svg" width="30" height="30" alt="Threads"><br><sub>Threads</sub></a></td>
+    <td align="center" width="90"><a href="https://discord.chiefgyk3d.com" title="Discord"><img src="media/icons/discord.svg" width="30" height="30" alt="Discord"><br><sub>Discord</sub></a></td>
+    <td align="center" width="90"><a href="https://matrix-invite.chiefgyk3d.com" title="Matrix"><img src="media/icons/matrix.svg" width="30" height="30" alt="Matrix"><br><sub>Matrix</sub></a></td>
+  </tr>
+</table>
+</div>
+
+<div align="center"><sub>Made with ❤️ by <a href="https://github.com/ChiefGyk3D">ChiefGyk3D</a></sub></div>

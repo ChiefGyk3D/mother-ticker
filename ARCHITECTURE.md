@@ -147,7 +147,16 @@ kernel or PID 1 has stopped.
 
 ## Provisioning
 
-One Ansible role, imported task files in a fixed order, tags per file. The
+One Ansible role, two ways to drive it. From a controller: `ansible-playbook
+site.yml` over SSH with an inventory, for someone running both units or more.
+From a shell on the unit: `mother-ticker-install` reads a `KEY=VALUE` file,
+writes a one-host inventory with `ansible_connection: local`, installs
+`ansible-core` from apt if needed and runs the same play against localhost.
+A second, hand-written shell implementation was considered and rejected: two
+implementations of fifteen task files would drift the first time one of them
+was fixed under pressure, and the local run costs one apt package.
+
+The role: imported task files in a fixed order, tags per file. The
 role refuses to run on an overlay root (changes would vanish), asserts the
 things it depends on, and ends with a verification pass that names what to
 look at when something is missing. The read-only overlay is the very last

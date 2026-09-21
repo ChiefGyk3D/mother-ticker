@@ -50,16 +50,22 @@ sudo apt-get update && sudo apt-get dist-upgrade
 sudo mother-ticker-maint off             # reboot
 ```
 
-To update the application as well, from your controller on the management
-network during the same window:
+To update the application as well, on the unit itself (after pulling or
+copying a newer checkout to `/opt/mother-ticker/repo`):
+
+```sh
+sudo mother-ticker-install
+```
+
+or from your controller on the management network during the same window:
 
 ```sh
 cd ansible
 ../.venv/bin/ansible-playbook site.yml -l ntp-malware
 ```
 
-The role's last step re-enables the overlay and reboots, so you do not need
-the manual `off` in that case. The role refuses to run while the overlay is
+Either way the role's last step re-enables the overlay and reboots, so you do
+not need the manual `off` in that case. The role refuses to run while the overlay is
 active; `on` first.
 
 ## Option B: update from a bundle (no WAN needed)
@@ -93,12 +99,12 @@ cd /tmp && mkdir bundle && tar -C bundle -xf mother-ticker-offline-*.tar
 sudo cp -a bundle/var/lib/apt/lists/. /var/lib/apt/lists/
 sudo cp bundle/debs/*.deb /var/cache/apt/archives/
 sudo apt-get --no-download dist-upgrade
-sudo /opt/mother-ticker/venv/bin/pip install --no-index --find-links /tmp/bundle/wheelhouse --upgrade /opt/mother-ticker/src
+sudo /opt/mother-ticker/venv/bin/pip install --no-index --find-links /tmp/bundle/wheelhouse --upgrade /opt/mother-ticker/repo
 sudo mother-ticker-maint off                                  # reboot
 ```
 
 To update the application source itself this way, copy the repository's
-`src/` and `pyproject.toml` to `/opt/mother-ticker/src` before the pip line,
+`src/` and `pyproject.toml` to `/opt/mother-ticker/repo` before the pip line,
 or run the role with `mother_ticker_offline: true` and
 `mother_ticker_wheelhouse: /path/to/bundle/wheelhouse` from the controller.
 

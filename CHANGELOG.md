@@ -13,6 +13,9 @@ headless; not yet run on the target hardware.
 
 ### Added
 
+- Two ways to provision: `mother-ticker-install` from a shell on the unit
+  (config file, no controller) and `ansible-playbook` from a controller. Both
+  run the same role.
 - Ansible role that turns Raspberry Pi OS Lite (64-bit) into the appliance:
   device tree overlays for the Uputronics GPS/RTC HAT (PPS, RTC, UART release,
   hardware watchdog), gpsd with a boot-time GNSS constellation policy (GPS and
@@ -39,4 +42,6 @@ headless; not yet run on the target hardware.
   yamllint, ansible-lint, gitleaks, and an all-green gate. Tag-triggered
   release workflow.
 - Documentation: README, ARCHITECTURE, RUNBOOK, SECURITY, CONTRIBUTING, NTS
-  guide, offline-update guide.
+  guide, offline-update guide. Issue forms for bug reports and bench results,
+  Dependabot for action pins and Python dependencies, and the support and
+  socials sections shared with the maintainer's other projects.

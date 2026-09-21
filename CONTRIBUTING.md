@@ -73,7 +73,9 @@ You can run the TUI on any Linux machine without the hardware:
 The CI never sees a Pi. Before a release, and for any change to the role, the
 GNSS script, chrony.conf or the boot configuration, run it on a real unit:
 
-1. Deploy to a bench unit with `ansible-playbook site.yml -l <unit>`.
+1. Deploy to a bench unit, from the unit (`sudo scripts/install.sh --config
+   install.conf`) or from a controller (`ansible-playbook site.yml -l <unit>`).
+   Both drive the same role; test the path you changed.
 2. Confirm the verify step passes and the TUI reaches `ALL SYSTEMS NOMINAL`.
 3. `chronyc sources -v` shows `#* PPS`; `ppstest /dev/pps0` shows pulses;
    `hwclock -r` agrees with `date`.
@@ -95,6 +97,33 @@ Say in the PR what you ran and on what OS image.
   a new job must be added to its `needs` list or the hygiene test fails.
 - Commit messages: imperative subject under 72 characters, a body that says
   why.
+
+## Licensing and copyright
+
+One licence for the whole tree: AGPL-3.0-or-later. Every Python and shell
+file carries an SPDX header, and the hygiene test fails the build when one is
+missing.
+
+### You keep your copyright
+
+**There is no CLA and no copyright assignment.** We are not asking for either.
+
+- **You retain copyright on your own contributions**, licensed under
+  AGPL-3.0-or-later by the act of contributing.
+- Contributions made by Renegade Penguin LLC are the LLC's.
+- Everything else stays with whoever wrote it.
+
+This is the ordinary arrangement for a copyleft project, and it is written
+down because people reasonably assume otherwise when a company name appears
+in the copyright headers. The LLC is named there because a legal person can
+enforce the licence and a handle cannot, not because it is collecting rights
+from contributors.
+
+### Attribution
+
+Handles are fine everywhere attribution appears: commit authorship,
+`Co-Authored-By`, the CHANGELOG, a bench report. The copyright holder line is
+a separate thing from attribution, and neither replaces the other.
 
 ## Releases
 
