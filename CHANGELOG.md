@@ -7,6 +7,11 @@ follows [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ## [0.1.0] - 2026-09-21
+
+First cut, **alpha**: tested in CI against recorded gpsd and chrony output and
+rendered headless; not yet run on the target hardware. The lifecycle label
+lives in `src/mother_ticker/version.py` beside the version.
+
 ### Added
 
 - Daily pending-updates check (`mother-ticker check-updates`, a systemd
@@ -21,29 +26,6 @@ follows [Semantic Versioning](https://semver.org/).
 - Admin login from the TUI: Ctrl+A or a menu item hands the terminal to
   `su - <admin>` for a password-gated shell, with a keyboard or over SSH, in
   both modes. F1 shows every key; the dashboard footer lists the main ones.
-
-### Changed
-
-- The health ladder may reboot in both modes; a dev box that wedges itself
-  reboots too.
-- A `mode` flag (`appliance`, the default, or `dev`) now decides the
-  read-only overlay, apt timer masking, journal storage, the TUI's shell
-  escape and whether the health ladder may reboot; `site` decides only
-  networks, metrics path and chrony sources. Appliance is the default on
-  both sites, so a main-LAN unit gets the overlay too unless it is set to
-  `dev`.
-- The role writes `/etc/mother-ticker/install.conf` from the values it was
-  deployed with (never overwriting one that exists), so a unit deployed from
-  a controller can later run `mother-ticker-install` on its own.
-- The About screen's belly emblem is the swirl with the anarchy A.
-
-## [0.1.0] - 2026-09-21
-
-First cut, **alpha**: tested in CI against recorded gpsd and chrony output and
-rendered headless; not yet run on the target hardware. The lifecycle label
-lives in `src/mother_ticker/version.py` beside the version.
-
-### Added
 
 - Two ways to provision: `mother-ticker-install` from a shell on the unit
   (config file, no controller) and `ansible-playbook` from a controller. Both
@@ -79,3 +61,18 @@ lives in `src/mother_ticker/version.py` beside the version.
   guide, offline-update guide. Issue forms for bug reports and bench results,
   Dependabot for action pins and Python dependencies, and the support and
   socials sections shared with the maintainer's other projects.
+
+### Notes on the design as released
+
+- The health ladder may reboot in both modes; a dev box that wedges itself
+  reboots too.
+- A `mode` flag (`appliance`, the default, or `dev`) now decides the
+  read-only overlay, apt timer masking, journal storage, the TUI's shell
+  escape and whether the health ladder may reboot; `site` decides only
+  networks, metrics path and chrony sources. Appliance is the default on
+  both sites, so a main-LAN unit gets the overlay too unless it is set to
+  `dev`.
+- The role writes `/etc/mother-ticker/install.conf` from the values it was
+  deployed with (never overwriting one that exists), so a unit deployed from
+  a controller can later run `mother-ticker-install` on its own.
+- The About screen's belly emblem is the swirl with the anarchy A.

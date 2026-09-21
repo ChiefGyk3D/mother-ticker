@@ -36,6 +36,21 @@ if ! grep -q '^## \[Unreleased\]' CHANGELOG.md; then
     exit 1
 fi
 
+# Four cases. A section for the version may already exist (the first release,
+# written by hand) and Unreleased may or may not hold entries.
+section_exists=0; grep -q "^## \[$version\]" CHANGELOG.md && section_exists=1
+unreleased_has_entries=0; python3 scripts/changelog_section.py --check Unreleased >/dev/null 2>&1 && unreleased_has_entries=1
+roll=0
+if [[ $section_exists -eq 1 && $unreleased_has_entries -eq 1 ]]; then
+    echo "CHANGELOG.md has both a [$version] section and Unreleased entries; fold them into one by hand, or pick the next version" >&2
+    exit 1
+elif [[ $section_exists -eq 0 && $unreleased_has_entries -eq 0 ]]; then
+    echo "CHANGELOG.md's [Unreleased] section is empty and there is no [$version] section; nothing to release" >&2
+    exit 1
+elif [[ $section_exists -eq 0 ]]; then
+    roll=1
+fi
+
 today=$(date -u +%Y-%m-%d)
 
 # version.py is the single source of truth.
@@ -45,8 +60,10 @@ grep -q "__version__ = \"$version\"" src/mother_ticker/version.py
 # README badge.
 sed -i -E "s/(version-)[0-9]+\.[0-9]+\.[0-9]+(-blue)/\1$version\2/" README.md
 
-# Roll Unreleased into a dated section and open a fresh Unreleased above it.
-python3 - "$version" "$today" <<'PY'
+# Roll Unreleased into a dated section and open a fresh Unreleased above it,
+# unless the section was already written by hand.
+if [[ $roll -eq 1 ]]; then
+    python3 - "$version" "$today" <<'PY'
 import re, sys
 version, today = sys.argv[1:3]
 path = "CHANGELOG.md"
@@ -56,11 +73,16 @@ text, n = re.subn(r"^## \[Unreleased\]\s*$", new, text, count=1, flags=re.M)
 assert n == 1, "no Unreleased heading"
 open(path, "w", encoding="utf-8").write(text)
 PY
+fi
 
 python3 scripts/changelog_section.py --check "$version"
 
 git add src/mother_ticker/version.py README.md CHANGELOG.md
-git commit -m "Release $version"
+if ! git diff --cached --quiet; then
+    git commit -m "Release $version"
+else
+    echo "version, badge and CHANGELOG already say $version; tagging HEAD as is"
+fi
 git tag -a "v$version" -m "Mother Ticker $version"
 
 echo
