@@ -30,7 +30,7 @@
   when: mother_ticker_fail2ban | bool
 
 - name: Enable fail2ban
-  ansible.builtin.systemd_service:
+  ansible.builtin.systemd:
     name: fail2ban.service
     enabled: true
     state: started

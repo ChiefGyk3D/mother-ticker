@@ -7,7 +7,7 @@
   notify: Restart gpsd
 
 - name: Disable socket activation so gpsd runs from boot, not on first client
-  ansible.builtin.systemd_service:
+  ansible.builtin.systemd:
     name: gpsd.socket
     enabled: false
     state: stopped
@@ -31,7 +31,7 @@
     - Restart gpsd
 
 - name: Enable gpsd
-  ansible.builtin.systemd_service:
+  ansible.builtin.systemd:
     name: gpsd.service
     enabled: true
     daemon_reload: true
@@ -56,7 +56,7 @@
   notify: Reload systemd
 
 - name: Enable the GNSS configuration unit
-  ansible.builtin.systemd_service:
+  ansible.builtin.systemd:
     name: mother-ticker-gnss-config.service
     enabled: true
     daemon_reload: true

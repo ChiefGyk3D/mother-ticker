@@ -6,7 +6,7 @@
   changed_when: false
 
 - name: Disable and mask services this role does not need
-  ansible.builtin.systemd_service:
+  ansible.builtin.systemd:
     name: "{{ item }}"
     enabled: false
     state: stopped
@@ -15,7 +15,7 @@
   when: item in (mother_ticker_unit_files.stdout_lines | map('split') | map('first') | list)
 
 - name: Stop unattended apt activity on the isolated unit
-  ansible.builtin.systemd_service:
+  ansible.builtin.systemd:
     name: "{{ item }}"
     enabled: false
     state: stopped

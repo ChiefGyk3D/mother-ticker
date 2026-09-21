@@ -16,18 +16,19 @@
     state: directory
     mode: "0755"
 
-- name: Copy the application source
+- name: Copy the checkout to the unit (application, role and scripts)
   ansible.builtin.copy:
     src: "{{ playbook_dir }}/../{{ item }}"
-    dest: "{{ mother_ticker_install_dir }}/src/"
+    dest: "{{ mother_ticker_install_dir }}/repo/"
     mode: "preserve"
   loop:
     - src
+    - ansible
+    - scripts
     - pyproject.toml
     - README.md
     - LICENSE
     - NOTICE
-  register: mother_ticker_source_copy
 
 - name: Create the virtual environment
   ansible.builtin.command:
@@ -47,7 +48,7 @@
       {{ mother_ticker_install_dir }}/venv/bin/pip install --upgrade
       {{ ('--no-index --find-links ' ~ mother_ticker_install_dir ~ '/wheelhouse')
          if mother_ticker_wheelhouse | length > 0 else '' }}
-      {{ mother_ticker_install_dir }}/src
+      {{ mother_ticker_install_dir }}/repo
   register: mother_ticker_pip
   changed_when: "'Successfully installed' in mother_ticker_pip.stdout"
   notify: Restart mother-ticker services
@@ -90,6 +91,12 @@
     dest: /usr/local/sbin/mother-ticker-stage-bundle
     mode: "0755"
 
+- name: Install the on-box installer for re-runs from the unit itself
+  ansible.builtin.copy:
+    src: "{{ playbook_dir }}/../scripts/install.sh"
+    dest: /usr/local/sbin/mother-ticker-install
+    mode: "0755"
+
 - name: Install systemd units
   ansible.builtin.template:
     src: "{{ item }}.j2"
@@ -111,28 +118,28 @@
   notify: Setup console
 
 - name: Hand tty1 to the TUI
-  ansible.builtin.systemd_service:
+  ansible.builtin.systemd:
     name: getty@tty1.service
     enabled: false
     state: stopped
   when: mother_ticker_console_tui | bool
 
 - name: Enable the console TUI
-  ansible.builtin.systemd_service:
+  ansible.builtin.systemd:
     name: mother-ticker-console.service
     enabled: "{{ mother_ticker_console_tui | bool }}"
     state: "{{ 'started' if mother_ticker_console_tui | bool else 'stopped' }}"
     daemon_reload: true
 
 - name: Enable the metrics exporter
-  ansible.builtin.systemd_service:
+  ansible.builtin.systemd:
     name: mother-ticker-exporter.service
     enabled: "{{ mother_ticker_metrics_mode != 'none' }}"
     state: "{{ 'started' if mother_ticker_metrics_mode != 'none' else 'stopped' }}"
     daemon_reload: true
 
 - name: Enable the health-check timer
-  ansible.builtin.systemd_service:
+  ansible.builtin.systemd:
     name: mother-ticker-healthcheck.timer
     enabled: true
     state: started

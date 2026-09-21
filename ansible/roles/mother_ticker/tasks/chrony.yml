@@ -37,7 +37,7 @@
     - Restart chrony
 
 - name: Enable chrony
-  ansible.builtin.systemd_service:
+  ansible.builtin.systemd:
     name: chrony.service
     enabled: true
     daemon_reload: true

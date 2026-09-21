@@ -25,7 +25,7 @@
   notify: Reboot required
 
 - name: Disable the Bluetooth UART helper, which would grab the PL011
-  ansible.builtin.systemd_service:
+  ansible.builtin.systemd:
     name: hciuart.service
     enabled: false
     state: stopped
@@ -34,7 +34,7 @@
   when: mother_ticker_disable_bt | bool
 
 - name: Stop serial logins on the GPS UART
-  ansible.builtin.systemd_service:
+  ansible.builtin.systemd:
     name: "{{ item }}"
     enabled: false
     state: stopped
