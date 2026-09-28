@@ -28,6 +28,15 @@ follows [Semantic Versioning](https://semver.org/).
   line. Tests that every metric the Grafana files name is one the exporter
   serves.
 
+### Fixed
+
+- The RTC overlay line now carries `backup-switchover-mode=1`
+  (`mother_ticker_rtc_backup_switchover`). The RV-3028 ships with switchover
+  disabled, so the role's previous `dtoverlay=i2c-rtc,rv3028` left the clock
+  stopping whenever the Pi lost power; the kernel driver writes the mode to
+  the chip's EEPROM at probe. `hwclock --param-get=backup_switch_mode` is the
+  check, added to the bench checklist.
+
 ## [0.1.0] - 2026-09-21
 
 First cut, **alpha**: tested in CI against recorded gpsd and chrony output and

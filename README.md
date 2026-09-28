@@ -79,8 +79,8 @@ role configures, and where it comes from:
 | Signal | Pi pins | Role setting | Where to verify |
 |---|---|---|---|
 | GNSS UART (NMEA and UBX) | GPIO14 TXD, GPIO15 RXD (pins 8, 10), `/dev/ttyAMA0` | `enable_uart=1`, `dtoverlay=disable-bt`, `hciuart` masked | Uputronics board page |
-| PPS | GPIO18 (pin 12) | `dtoverlay=pps-gpio,gpiopin=18` | *verify on hardware*: `dmesg \| grep pps` then `ppstest /dev/pps0` |
-| RTC (RV-3028-C7) | I2C1, GPIO2 SDA, GPIO3 SCL (pins 3, 5), address 0x52 | `dtparam=i2c_arm=on`, `dtoverlay=i2c-rtc,rv3028` | `i2cdetect -y 1` shows `UU` at 52 once the driver has it |
+| PPS | GPIO18 (pin 12) | `dtoverlay=pps-gpio,gpiopin=18` | *verify on hardware*: `dmesg \| grep pps` then `ppstest /dev/pps0`. 18 is the overlay's own default and what other guides for this board use |
+| RTC (RV-3028-C7) | I2C1, GPIO2 SDA, GPIO3 SCL (pins 3, 5), address 0x52 | `dtparam=i2c_arm=on`, `dtoverlay=i2c-rtc,rv3028,backup-switchover-mode=1` | `i2cdetect -y 1` shows `UU` at 52 once the driver has it; `hwclock --param-get=backup_switch_mode` reports 0x1, without which the RTC stops when power is off |
 | Antenna | SMA on the HAT | none | `cgps` shows satellites within minutes outdoors |
 
 Assembly order that works: fit the Pi into the SmartiPi frame, connect the DSI

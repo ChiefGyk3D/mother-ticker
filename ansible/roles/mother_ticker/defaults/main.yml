@@ -52,6 +52,11 @@ mother_ticker_hardware_present: true
 # Verify the PPS GPIO against the board's documentation before first deploy.
 mother_ticker_pps_gpio: 18
 mother_ticker_rtc_overlay: "i2c-rtc,rv3028"
+# RV-3028 backup power switchover, written to the chip's EEPROM by the kernel
+# driver at probe: 0 disabled (the factory default, so the RTC stops when the
+# Pi loses power), 1 direct switching (what Uputronics documents for this
+# board), 3 level switching. Without it the RTC is decorative.
+mother_ticker_rtc_backup_switchover: 1
 mother_ticker_gps_device: /dev/ttyAMA0
 mother_ticker_disable_bt: true             # frees the PL011 UART for the GPS
 mother_ticker_disable_wifi: true           # wired appliance; set false if you need Wi-Fi

@@ -433,7 +433,10 @@ class TestBootAndDevices:
         assert "dtoverlay=disable-bt" in lines
         assert f"dtoverlay=pps-gpio,gpiopin={v['mother_ticker_pps_gpio']}" in lines
         assert "dtparam=i2c_arm=on" in lines
-        assert f"dtoverlay={v['mother_ticker_rtc_overlay']}" in lines
+        assert (
+            f"dtoverlay={v['mother_ticker_rtc_overlay']},backup-switchover-mode="
+            f"{v['mother_ticker_rtc_backup_switchover']}" in lines
+        ), "without the switchover mode the RTC stops when the Pi loses power"
         assert "dtparam=watchdog=on" in lines
 
     def test_gpsd_reads_the_uart_and_pps_from_boot(self, scenario: Scenario) -> None:
