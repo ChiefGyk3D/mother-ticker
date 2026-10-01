@@ -167,6 +167,14 @@ SCENARIOS = [
             "mother_ticker_upstream_ntp": ["time.cloudflare.com"],
         },
     ),
+    Scenario(
+        "inverted panel with touch",
+        {
+            "mother_ticker_site": "main-lan",
+            "mother_ticker_display_rotate": 180,
+            "mother_ticker_disable_touchscreen": False,
+        },
+    ),
 ]
 
 TEMPLATE_NAMES = sorted(p.name for p in TEMPLATES.glob("*.j2"))
@@ -438,6 +446,10 @@ class TestBootAndDevices:
             f"{v['mother_ticker_rtc_backup_switchover']}" in lines
         ), "without the switchover mode the RTC stops when the Pi loses power"
         assert "dtparam=watchdog=on" in lines
+        # The DSI panel is detected by the firmware on a Pi 4; the role must not
+        # add a panel overlay, only take its touch controller away.
+        assert not any("dsi" in ln.lower() for ln in lines)
+        assert ("disable_touchscreen=1" in lines) == bool(v["mother_ticker_disable_touchscreen"])
 
     def test_gpsd_reads_the_uart_and_pps_from_boot(self, scenario: Scenario) -> None:
         lines = _lines(render("gpsd.default.j2", scenario.vars))
@@ -450,6 +462,82 @@ class TestBootAndDevices:
         assert 'UBX_ENABLE="GPS GALILEO"' in lines
         assert 'UBX_DISABLE="GLONASS BEIDOU"' in lines
         assert 'UBX_STATIONARY="1"' in lines
+
+
+STOCK_CMDLINE = (
+    "console=serial0,115200 console=tty1 root=PARTUUID=0a1b2c3d-02 rootfstype=ext4 "
+    "fsck.repair=yes rootwait cfg80211.ieee80211_regdom=GB"
+)
+ROTATION = re.compile(r"video=DSI-1:800x480@60,rotate=(\d+)")
+
+
+def apply_cmdline_tasks(cmdline: str, variables: dict[str, Any]) -> str:
+    """Run the role's cmdline.txt tasks the way Ansible would, on one line of text.
+
+    `replace` is re.sub; `lineinfile` with backrefs rewrites the matching line from the
+    match; `when` is evaluated as the Jinja expression it is. The task file is read, not
+    copied, so a regexp changed in the role is what this exercises.
+    """
+    tasks = yaml.safe_load((ROLE / "tasks" / "boot_config.yml").read_text())
+    for task in tasks:
+        if "ansible.builtin.replace" in task:
+            kind, mod = "replace", task["ansible.builtin.replace"]
+        elif "ansible.builtin.lineinfile" in task:
+            kind, mod = "lineinfile", task["ansible.builtin.lineinfile"]
+        else:
+            continue
+        if mod.get("path") != "/boot/firmware/cmdline.txt":
+            continue
+        when = task.get("when")
+        if when is not None:
+            verdict = ENV.from_string("{{ (" + when + ") }}").render(**variables)
+            if verdict != "True":
+                continue
+        if kind == "replace":
+            replacement = ENV.from_string(mod["replace"]).render(**variables)
+            cmdline = re.sub(mod["regexp"], replacement, cmdline)
+        else:
+            match = re.search(mod["regexp"], cmdline)
+            if match:
+                cmdline = match.expand(ENV.from_string(mod["line"]).render(**variables))
+    return cmdline
+
+
+class TestKernelCommandLine:
+    """The serial console leaves, tty1 stays, and the panel rotation is one token or none."""
+
+    def test_stock_cmdline_releases_the_uart_and_keeps_tty1(self) -> None:
+        out = apply_cmdline_tasks(STOCK_CMDLINE, effective_vars({}))
+        assert "serial0" not in out and "ttyAMA0" not in out
+        assert out.count("console=tty1") == 1
+        assert "video=" not in out, "no rotation by default"
+        assert "  " not in out and out == out.strip()
+
+    def test_tty1_is_added_when_absent(self) -> None:
+        out = apply_cmdline_tasks("root=PARTUUID=0a1b2c3d-02 rootwait", effective_vars({}))
+        assert out == "root=PARTUUID=0a1b2c3d-02 rootwait console=tty1"
+
+    def test_rotation_is_added_replaced_and_removed_idempotently(self) -> None:
+        inverted = effective_vars({"mother_ticker_display_rotate": 180})
+        out = apply_cmdline_tasks(STOCK_CMDLINE, inverted)
+        assert ROTATION.findall(out) == ["180"], out
+        assert out.endswith(" video=DSI-1:800x480@60,rotate=180")
+        assert apply_cmdline_tasks(out, inverted) == out, "a re-run must change nothing"
+        turned = apply_cmdline_tasks(out, effective_vars({"mother_ticker_display_rotate": 90}))
+        assert ROTATION.findall(turned) == ["90"], turned
+        back = apply_cmdline_tasks(turned, effective_vars({}))
+        assert "video=" not in back
+        assert "  " not in back and back == back.strip()
+        assert back == apply_cmdline_tasks(STOCK_CMDLINE, effective_vars({}))
+
+    def test_rotation_must_be_one_the_kernel_accepts(self) -> None:
+        tasks = yaml.safe_load((ROLE / "tasks" / "boot_config.yml").read_text())
+        gate = next(t for t in tasks if "ansible.builtin.assert" in t)
+        cases = ((0, True), (90, True), (180, True), (270, True), (45, False), (-180, False))
+        for value, ok in cases:
+            variables = effective_vars({"mother_ticker_display_rotate": value})
+            verdict = ENV.from_string("{{ (" + gate["ansible.builtin.assert"]["that"] + ") }}")
+            assert (verdict.render(**variables) == "True") is ok, value
 
 
 def _unit(text: str) -> dict[str, list[str]]:

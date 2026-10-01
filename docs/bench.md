@@ -51,9 +51,14 @@ run is a bug; name it.
 
 - tty1 shows the dashboard on the DSI panel within a minute of boot, red
   banner, big clock ticking, the version in the corner. Record whether the
-  font size (`FONTSIZE="8x16"`) gives the intended 100 by 30 cells, and
-  whether the touchscreen's touch input does anything unwanted (it should be
-  ignored).
+  font size (`FONTSIZE="8x16"`) gives the intended 100 by 30 cells.
+- The right way up. If the case mounts the panel inverted, set
+  `DISPLAY_ROTATE=180` (`mother_ticker_display_rotate`), re-run `-t boot`,
+  reboot, and put the value in your report; the role writes the Pi
+  documentation's `video=DSI-1:800x480@60,rotate=180` to cmdline.txt.
+- A finger on the panel does nothing: the touch controller is disabled in
+  firmware (`disable_touchscreen=1`), so `grep -i ft5406
+  /proc/bus/input/devices` prints nothing.
 - Plug in a keyboard. Any key opens the menu; Esc returns; F1 lists the keys.
 - **Ctrl+A**: the admin password prompt appears; the right password gives a
   shell as the admin user with `sudo` working; `exit` brings the dashboard

@@ -85,6 +85,11 @@ class TestExampleConfig:
         assert result.returncode == 0, result.stderr
         assert load(tmp_path)["mother_ticker_mode"] == "dev"
 
+    def test_display_rotate_flag(self, tmp_path: Path) -> None:
+        result = run("--config", str(EXAMPLE), "--display-rotate", "180", out=tmp_path)
+        assert result.returncode == 0, result.stderr
+        assert load(tmp_path)["mother_ticker_display_rotate"] == 180
+
     def test_malware_net_without_explicit_upstream_gets_none(self, tmp_path: Path) -> None:
         """A minimal malware-net config must not inherit public servers from the default."""
         conf = tmp_path / "c.conf"
@@ -102,6 +107,7 @@ class TestValidation:
             ("--overlay", "maybe", "OVERLAY must be"),
             ("--relay-transport", "pigeon", "RELAY_TRANSPORT must be"),
             ("--relay-framing", "smoke", "RELAY_FRAMING must be"),
+            ("--display-rotate", "45", "DISPLAY_ROTATE must be"),
         ],
     )
     def test_bad_values_fail_early(

@@ -33,6 +33,7 @@ usage: mother-ticker-install [options]
   --relay-host H --relay-port P --relay-transport tcp|udp --relay-framing newline|octet-counted
   --orphan-stratum N       --overlay auto|yes|no     --nts yes|no
   --hardware-present yes|no   no = bench without the HAT: skip PPS/RTC/UART checks, no reboots
+  --display-rotate 0|90|180|270   console rotation on the DSI panel, degrees clockwise
   --nmea-offset SECONDS    --offline yes|no          --wheelhouse DIR
   --alert-webhook-url URL  --alert-format json|ntfy  --alert-ntfy-topic T  --alert-token-file F
   --alert-min-level warning|critical
@@ -51,7 +52,7 @@ die() { echo "mother-ticker-install: $*" >&2; exit 1; }
 SITE=main-lan MODE=appliance OVERLAY=auto NTS=no OFFLINE=no UPSTREAM_SET=0 HARDWARE_PRESENT=yes
 ADMIN_USER='' HOSTNAME_SET='' NTP_ALLOW='' MGMT_ALLOW='' METRICS_ALLOW='' METRICS_PORT=''
 UPSTREAM_NTP='' RELAY_HOST='' RELAY_PORT='' RELAY_TRANSPORT='' RELAY_FRAMING='' ORPHAN_STRATUM=''
-NMEA_OFFSET='' WHEELHOUSE='' EXTRA_VARS_FILE='' REPO_DIR=''
+NMEA_OFFSET='' WHEELHOUSE='' EXTRA_VARS_FILE='' REPO_DIR='' DISPLAY_ROTATE=''
 ALERT_WEBHOOK_URL='' ALERT_FORMAT='' ALERT_NTFY_TOPIC='' ALERT_TOKEN_FILE='' ALERT_MIN_LEVEL=''
 
 load_conf() {
@@ -71,6 +72,7 @@ load_conf() {
             SITE) SITE=$val ;;
             MODE) MODE=$val ;;
             HARDWARE_PRESENT) HARDWARE_PRESENT=$val ;;
+            DISPLAY_ROTATE) DISPLAY_ROTATE=$val ;;
             ADMIN_USER) ADMIN_USER=$val ;;
             HOSTNAME) HOSTNAME_SET=$val ;;
             NTP_ALLOW) NTP_ALLOW=$val ;;
@@ -116,6 +118,7 @@ while [[ $# -gt 0 ]]; do
         --site) SITE=$2; shift ;;
         --mode) MODE=$2; shift ;;
         --hardware-present) HARDWARE_PRESENT=$2; shift ;;
+        --display-rotate) DISPLAY_ROTATE=$2; shift ;;
         --hostname) HOSTNAME_SET=$2; shift ;;
         --admin-user) ADMIN_USER=$2; shift ;;
         --ntp-allow) NTP_ALLOW=$2; shift ;;
@@ -154,6 +157,7 @@ case $SITE in main-lan|malware-net) ;; *) die "SITE must be main-lan or malware-
 case $MODE in appliance|dev) ;; *) die "MODE must be appliance or dev (got '$MODE')" ;; esac
 case $OVERLAY in auto|yes|no) ;; *) die "OVERLAY must be auto, yes or no" ;; esac
 case $HARDWARE_PRESENT in yes|no) ;; *) die "HARDWARE_PRESENT must be yes or no" ;; esac
+if [[ -n $DISPLAY_ROTATE ]]; then case $DISPLAY_ROTATE in 0|90|180|270) ;; *) die "DISPLAY_ROTATE must be 0, 90, 180 or 270 (got '$DISPLAY_ROTATE')" ;; esac; fi
 case $NTS in yes|no) ;; *) die "NTS must be yes or no" ;; esac
 case $OFFLINE in yes|no) ;; *) die "OFFLINE must be yes or no" ;; esac
 [[ -n $ADMIN_USER ]] || die "ADMIN_USER is required (the account Raspberry Pi Imager created)"
@@ -204,6 +208,7 @@ write_inventory() {
         [[ $OVERLAY == yes ]] && echo "      mother_ticker_overlay: true"
         [[ $OVERLAY == no ]] && echo "      mother_ticker_overlay: false"
         [[ $HARDWARE_PRESENT == no ]] && echo "      mother_ticker_hardware_present: false"
+        [[ -n $DISPLAY_ROTATE ]] && echo "      mother_ticker_display_rotate: $DISPLAY_ROTATE"
         [[ -n $NMEA_OFFSET ]] && echo "      mother_ticker_nmea_offset: $NMEA_OFFSET"
         [[ $NTS == yes ]] && echo "      mother_ticker_nts_enabled: true"
         [[ $OFFLINE == yes ]] && echo "      mother_ticker_offline: true"
@@ -267,6 +272,7 @@ if [[ $conf_file != "$CONF_DEFAULT" ]]; then
         echo "ORPHAN_STRATUM=$ORPHAN_STRATUM"
         echo "OVERLAY=$OVERLAY"
         echo "HARDWARE_PRESENT=$HARDWARE_PRESENT"
+        echo "DISPLAY_ROTATE=$DISPLAY_ROTATE"
         echo "NMEA_OFFSET=$NMEA_OFFSET"
         echo "NTS=$NTS"
         echo "OFFLINE=$OFFLINE"
