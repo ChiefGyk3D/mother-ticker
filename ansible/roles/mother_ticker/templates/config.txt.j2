@@ -18,3 +18,7 @@ dtparam=watchdog=on
 # Wired appliance.
 dtoverlay=disable-wifi
 {% endif %}
+{% if mother_ticker_disable_touchscreen %}
+# The DSI panel is console only; keep its touch controller out of the input stack.
+disable_touchscreen=1
+{% endif %}

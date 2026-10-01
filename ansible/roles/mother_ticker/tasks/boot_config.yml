@@ -24,6 +24,41 @@
     backrefs: true
   notify: Reboot required
 
+# The DSI panel is detected by the firmware on a Pi 4; the only thing to set
+# is the console rotation when the case mounts it upside down, which the Pi
+# documentation does with a video= argument on the kernel command line.
+- name: Require a display rotation the kernel accepts
+  ansible.builtin.assert:
+    that: mother_ticker_display_rotate | int in [0, 90, 180, 270]
+    fail_msg: >-
+      mother_ticker_display_rotate must be 0, 90, 180 or 270 (degrees clockwise),
+      got {{ mother_ticker_display_rotate }}
+
+- name: Drop any console rotation from the kernel command line
+  ansible.builtin.replace:
+    path: /boot/firmware/cmdline.txt
+    regexp: '\s*video=DSI-1:\S*'
+    replace: ""
+  notify: Reboot required
+  when: mother_ticker_display_rotate | int == 0
+
+- name: Replace an existing console rotation
+  ansible.builtin.replace:
+    path: /boot/firmware/cmdline.txt
+    regexp: 'video=DSI-1:\S*'
+    replace: "video=DSI-1:800x480@60,rotate={{ mother_ticker_display_rotate | int }}"
+  notify: Reboot required
+  when: mother_ticker_display_rotate | int != 0
+
+- name: Rotate the console on the DSI panel
+  ansible.builtin.lineinfile:
+    path: /boot/firmware/cmdline.txt
+    regexp: '^(?!.*video=DSI-1:)(.*)$'
+    line: '\1 video=DSI-1:800x480@60,rotate={{ mother_ticker_display_rotate | int }}'
+    backrefs: true
+  notify: Reboot required
+  when: mother_ticker_display_rotate | int != 0
+
 - name: Disable the Bluetooth UART helper, which would grab the PL011
   ansible.builtin.systemd:
     name: hciuart.service

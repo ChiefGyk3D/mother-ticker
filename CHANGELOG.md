@@ -21,8 +21,15 @@ follows [Semantic Versioning](https://semver.org/).
   from the file instead of carrying a copy.
 - `docs/bench.md`, the checklist for a bare Pi now and the fitted board
   later, and what to record in the bench-result issue.
-- Tests that render every role template for six unit shapes (both sites,
-  both modes, no board, NTS) and check the result the way its consumer
+- `mother_ticker_display_rotate` / `DISPLAY_ROTATE` for a panel the case
+  mounts upside down: the Pi documentation's `video=DSI-1:800x480@60,rotate=N`
+  on the kernel command line, added, replaced or removed as one token, with
+  a test that runs the role's own cmdline.txt tasks over a stock command
+  line. `mother_ticker_disable_touchscreen` (default on) keeps the panel's
+  touch controller out of the input stack; the panel itself needs no overlay
+  on a Pi 4, the firmware detects it, checked against the Pi documentation.
+- Tests that render every role template for seven unit shapes (both sites,
+  both modes, no board, NTS, an inverted panel) and check the result the way its consumer
   reads it: `config.toml` through the application's loader, `install.conf`
   back through the installer, nftables, chrony, sshd and sudoers line by
   line. Tests that every metric the Grafana files name is one the exporter

@@ -47,6 +47,11 @@ ORPHAN_STRATUM=0
 # health ladder rebooting. Set yes (default) once the board is fitted and re-run.
 HARDWARE_PRESENT=yes
 
+# Console rotation on the DSI panel, degrees clockwise: 0, 90, 180 or 270.
+# 180 if the case mounts the panel upside down. The panel itself needs no
+# setting; the firmware detects it.
+DISPLAY_ROTATE=0
+
 # Read-only overlay root: auto (follows MODE), yes, or no.
 OVERLAY=auto
 

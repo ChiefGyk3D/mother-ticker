@@ -60,6 +60,13 @@ mother_ticker_rtc_backup_switchover: 1
 mother_ticker_gps_device: /dev/ttyAMA0
 mother_ticker_disable_bt: true             # frees the PL011 UART for the GPS
 mother_ticker_disable_wifi: true           # wired appliance; set false if you need Wi-Fi
+# The official 7 inch DSI panel needs no overlay: the firmware detects it on a
+# Pi 4 (Raspberry Pi documentation, Touch Display, "Autodetection"). The panel
+# is console only, so the touch controller is disabled in firmware. If the case
+# mounts the panel upside down, rotate the console: degrees clockwise, one of
+# 0, 90, 180 or 270, written to cmdline.txt as video=DSI-1:800x480@60,rotate=N.
+mother_ticker_disable_touchscreen: true
+mother_ticker_display_rotate: 0
 mother_ticker_hw_watchdog: true
 mother_ticker_watchdog_runtime_s: 15
 

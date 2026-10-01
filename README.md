@@ -63,7 +63,7 @@ Per unit, both identical:
 | Raspberry Pi 4 Model B, 1 GB | 1 GB is enough: no desktop, no swap, the exporter is capped at 96 MB. |
 | Uputronics GPS/RTC Expansion Board | u-blox M8 GNSS, Micro Crystal RV-3028-C7 RTC on I2C, PPS to a GPIO, UART to the Pi. |
 | Active GNSS antenna, SMA | Needs sky view. A window sill works for a first fix; a roof or an outside wall works for timing. |
-| Official Raspberry Pi 7 inch touchscreen (DSI) | Console only; there is no desktop. Touch is not used. Keyboard on USB when you want the menu locally. |
+| Official Raspberry Pi 7 inch touchscreen (DSI) | Console only; there is no desktop. The touch controller is disabled in firmware. Keyboard on USB when you want the menu locally. |
 | SmartiPi Touch 2 case with the 35 mm back cover | The deeper cover clears the HAT. |
 | microSD, 16 GB or larger, A2 rated | The isolated unit runs a read-only overlay, which is kind to the card. |
 | Raspberry Pi OS Lite (64-bit), bookworm or trixie | No desktop environment. |
@@ -82,6 +82,7 @@ role configures, and where it comes from:
 | PPS | GPIO18 (pin 12) | `dtoverlay=pps-gpio,gpiopin=18` | *verify on hardware*: `dmesg \| grep pps` then `ppstest /dev/pps0`. 18 is the overlay's own default and what other guides for this board use |
 | RTC (RV-3028-C7) | I2C1, GPIO2 SDA, GPIO3 SCL (pins 3, 5), address 0x52 | `dtparam=i2c_arm=on`, `dtoverlay=i2c-rtc,rv3028,backup-switchover-mode=1` | `i2cdetect -y 1` shows `UU` at 52 once the driver has it; `hwclock --param-get=backup_switch_mode` reports 0x1, without which the RTC stops when power is off |
 | Antenna | SMA on the HAT | none | `cgps` shows satellites within minutes outdoors |
+| DSI panel | `DISPLAY` connector, 15-way ribbon | no overlay: the firmware detects the panel on a Pi 4 (Raspberry Pi documentation, Touch Display, *Autodetection*); `disable_touchscreen=1`; `mother_ticker_display_rotate` (`DISPLAY_ROTATE`) adds `video=DSI-1:800x480@60,rotate=N` to cmdline.txt when the case mounts the panel upside down | `cat /sys/class/drm/card*-DSI-1/status` says `connected`; the dashboard is on the panel after boot and the right way up |
 
 Assembly order that works: fit the Pi into the SmartiPi frame, connect the DSI
 ribbon and the display power leads, seat the HAT, fit the 35 mm cover, attach
@@ -173,7 +174,8 @@ path):
 1. `preflight`: refuses an overlay root, a non-Debian OS, or a missing admin user.
 2. `packages`: chrony, gpsd, pps-tools, nftables, fail2ban and friends; removes
    `fake-hwclock`, avahi, ModemManager, Bluetooth, swap.
-3. `boot`: the config.txt block above and the console release in cmdline.txt.
+3. `boot`: the config.txt block above, the console release in cmdline.txt and
+   the panel rotation if one is set.
 4. `rtc`, `gpsd`, `chrony`, `firewall`, `ssh`, `services`, `watchdog`, `app`.
 5. One reboot if boot configuration changed.
 6. `verify`: asserts chronyd runs as `_chrony`, that `/dev/pps0`, `/dev/rtc0`
