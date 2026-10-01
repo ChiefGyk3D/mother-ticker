@@ -119,7 +119,8 @@ mother_ticker_wazuh_agent_name: "{{ mother_ticker_hostname }}"
 mother_ticker_wazuh_agent_group: ""        # existing group on the manager, or empty
 mother_ticker_wazuh_repo_url: https://packages.wazuh.com/4.x/apt/
 mother_ticker_wazuh_key_url: https://packages.wazuh.com/key/GPG-KEY-WAZUH
-mother_ticker_wazuh_key_fingerprint: 0DCFCA5547B19D2A6099506096B3EE5F29111145
+# A public key's fingerprint, not a secret; gitleaks' generic rule cannot tell.
+mother_ticker_wazuh_key_fingerprint: 0DCFCA5547B19D2A6099506096B3EE5F29111145  # gitleaks:allow
 
 # Health-check ladder.
 mother_ticker_health_restart_after: 4      # consecutive 30 s ticks
