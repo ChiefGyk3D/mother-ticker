@@ -222,3 +222,7 @@ work with no index for the isolated unit.
   and reboot without a password because the SD card is right there anyway.
 - Nothing in the repository is a secret. Real subnets live in a gitignored
   inventory. CI runs gitleaks.
+- Optional agents (Debian's node exporter, the Wazuh agent) exist only on a
+  unit that names them. The Wazuh repository's key is pinned by fingerprint
+  in the role and the agent is held at the named version; the exporter's
+  port opens to the scrapers only.

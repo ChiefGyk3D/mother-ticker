@@ -74,5 +74,17 @@ ALERT_NTFY_TOPIC=mother-ticker
 ALERT_TOKEN_FILE=          # e.g. /etc/mother-ticker/webhook.token (mode 0640 root:motherticker)
 ALERT_MIN_LEVEL=warning    # warning or critical
 
+# Optional agents for your own monitoring (main-lan; on the malware net only
+# if a scraper or manager is reachable from the segment).
+# Debian's Prometheus node exporter on 9100, answering METRICS_ALLOW only.
+NODE_EXPORTER=no
+# Wazuh agent: naming the manager switches it on. The agent is held at
+# WAZUH_VERSION, which must not be newer than the manager; the registration
+# password is read from a file on this unit (mode 0600, root), never from here.
+WAZUH_MANAGER=
+WAZUH_VERSION=
+WAZUH_PASSWORD_FILE=/etc/mother-ticker/wazuh.pass
+WAZUH_GROUP=
+
 # Optional YAML file of extra role variables (any mother_ticker_* default).
 EXTRA_VARS_FILE=

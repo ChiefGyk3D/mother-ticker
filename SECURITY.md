@@ -53,6 +53,12 @@ can do exactly what its menu shows.
 - Exporter unit: `NoNewPrivileges`, `ProtectSystem=strict`, `ProtectHome`,
   memory cap, unprivileged user.
 - Read-only overlay root on the isolated unit.
+- Optional agents only when named: the Wazuh apt repository is added with
+  its signing key fetched and checked against the fingerprint pinned in the
+  role before apt sees it, the agent held at the version you name; the node
+  exporter answers the scrapers' subnets only. The registration password is
+  read from a root-only file or a vault, never from the inventory, and the
+  task that uses it is `no_log`.
 
 ## Supported versions
 

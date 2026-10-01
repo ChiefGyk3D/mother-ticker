@@ -28,6 +28,15 @@ The job name matters: `MotherTickerScrapeDown` is written against
 addresses listed in `mother_ticker_metrics_allow`, so the first thing to
 check when `up` is 0 is that list.
 
+With `mother_ticker_node_exporter: true` the unit also runs Debian's node
+exporter on 9100, open to the same scrapers:
+
+```yaml
+  - job_name: node
+    static_configs:
+      - targets: ["ntp-main:9100"]
+```
+
 ## The rules
 
 `docs/alerts.md` lists every rule with its threshold and what to do when it

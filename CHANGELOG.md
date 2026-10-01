@@ -28,8 +28,18 @@ follows [Semantic Versioning](https://semver.org/).
   line. `mother_ticker_disable_touchscreen` (default on) keeps the panel's
   touch controller out of the input stack; the panel itself needs no overlay
   on a Pi 4, the firmware detects it, checked against the Pi documentation.
-- Tests that render every role template for seven unit shapes (both sites,
-  both modes, no board, NTS, an inverted panel) and check the result the way its consumer
+- Optional agents, off unless named (`-t integrations`): Debian's Prometheus
+  node exporter (`mother_ticker_node_exporter` / `NODE_EXPORTER`) on 9100,
+  open to the scrapers' subnets only; and the Wazuh agent
+  (`mother_ticker_wazuh_manager` / `WAZUH_MANAGER`), whose apt repository is
+  added only after the signing key's fingerprint matches the one pinned in
+  the role, installed at `mother_ticker_wazuh_version` and held there (the
+  manager must be at least as new), enrolled with a registration password
+  read from a root-only file or a vault. The verify step fails when the
+  agent did not enroll, because on the overlay a later enrollment would not
+  survive a reboot.
+- Tests that render every role template for eight unit shapes (both sites,
+  both modes, no board, NTS, an inverted panel, both agents) and check the result the way its consumer
   reads it: `config.toml` through the application's loader, `install.conf`
   back through the installer, nftables, chrony, sshd and sudoers line by
   line. Tests that every metric the Grafana files name is one the exporter

@@ -43,6 +43,10 @@
   ansible.builtin.import_tasks: app.yml
   tags: [app]
 
+- name: Optional agents (node exporter, Wazuh)
+  ansible.builtin.import_tasks: integrations.yml
+  tags: [integrations]
+
 - name: Apply pending boot changes
   ansible.builtin.meta: flush_handlers
 

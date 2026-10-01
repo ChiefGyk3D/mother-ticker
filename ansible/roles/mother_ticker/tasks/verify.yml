@@ -65,6 +65,38 @@
   changed_when: false
   failed_when: mother_ticker_active.stdout != 'active'
 
+- name: The node exporter must be active when asked for  # noqa: command-instead-of-module
+  ansible.builtin.command: systemctl is-active prometheus-node-exporter.service
+  register: mother_ticker_node_exporter_active
+  changed_when: false
+  failed_when: mother_ticker_node_exporter_active.stdout != 'active'
+  when: mother_ticker_node_exporter | bool
+
+- name: Check the Wazuh agent's enrollment
+  ansible.builtin.stat:
+    path: /var/ossec/etc/client.keys
+  register: mother_ticker_wazuh_keys
+  when: mother_ticker_wazuh_manager | length > 0
+
+- name: The Wazuh agent must be enrolled before the overlay goes on
+  ansible.builtin.assert:
+    that:
+      - mother_ticker_wazuh_keys.stat.exists
+      - mother_ticker_wazuh_keys.stat.size > 0
+    fail_msg: >-
+      /var/ossec/etc/client.keys is empty: the agent could not enroll with
+      {{ mother_ticker_wazuh_manager }}. On a read-only overlay an enrollment that happens
+      later vanishes at reboot and the manager sees a new agent each time. Check the manager
+      is reachable on 1515/tcp and the registration password, then re-run -t integrations,verify.
+  when: mother_ticker_wazuh_manager | length > 0
+
+- name: The Wazuh agent must be active when asked for  # noqa: command-instead-of-module
+  ansible.builtin.command: systemctl is-active wazuh-agent.service
+  register: mother_ticker_wazuh_active
+  changed_when: false
+  failed_when: mother_ticker_wazuh_active.stdout != 'active'
+  when: mother_ticker_wazuh_manager | length > 0
+
 - name: One-shot status from the appliance itself
   ansible.builtin.command: "{{ mother_ticker_install_dir }}/venv/bin/mother-ticker status"
   register: mother_ticker_status

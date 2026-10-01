@@ -1,0 +1,166 @@
+---
+# Optional agents for the operator's own monitoring: Debian's Prometheus node
+# exporter and the Wazuh agent. Neither runs on a unit that does not name it.
+
+# Prometheus node exporter -------------------------------------------------
+
+- name: Install the Prometheus node exporter
+  ansible.builtin.apt:
+    name: prometheus-node-exporter
+    state: present
+  when:
+    - mother_ticker_node_exporter | bool
+    - not mother_ticker_offline | bool
+
+- name: Bind the node exporter to its port
+  ansible.builtin.lineinfile:
+    path: /etc/default/prometheus-node-exporter
+    regexp: '^ARGS='
+    line: 'ARGS="--web.listen-address=:{{ mother_ticker_node_exporter_port | int }}"'
+    create: true
+    mode: "0644"
+  notify: Restart node exporter
+  when: mother_ticker_node_exporter | bool
+
+- name: Run the node exporter
+  ansible.builtin.systemd:
+    name: prometheus-node-exporter.service
+    enabled: true
+    state: started
+  when: mother_ticker_node_exporter | bool
+
+- name: Remove the node exporter when it is switched off
+  ansible.builtin.apt:
+    name: prometheus-node-exporter
+    state: absent
+    purge: true
+  when:
+    - not mother_ticker_node_exporter | bool
+    - not mother_ticker_offline | bool
+
+# Wazuh agent --------------------------------------------------------------
+
+- name: Wazuh agent
+  when: mother_ticker_wazuh_manager | length > 0
+  block:
+    - name: A Wazuh agent is pinned to a version the manager accepts
+      ansible.builtin.assert:
+        that:
+          - mother_ticker_wazuh_version | string | length > 0
+          - mother_ticker_wazuh_version | string is match('^[0-9]+\.[0-9]+\.[0-9]+$')
+        fail_msg: >-
+          Set mother_ticker_wazuh_version (for example "4.9.2") to the version your manager
+          runs or lower. Wazuh guarantees compatibility only when the manager is at least as
+          new as the agent, and the agent is held at this version in dpkg.
+
+    - name: A Wazuh agent needs a registration password
+      ansible.builtin.assert:
+        that: >-
+          mother_ticker_wazuh_registration_password | length > 0
+          or mother_ticker_wazuh_registration_password_file | length > 0
+        fail_msg: >-
+          Set mother_ticker_wazuh_registration_password_file (a file on the unit, mode 0600,
+          root) or mother_ticker_wazuh_registration_password (from a vault) so the agent can
+          enroll with {{ mother_ticker_wazuh_manager }}.
+
+    - name: Read the registration password from the unit
+      ansible.builtin.slurp:
+        src: "{{ mother_ticker_wazuh_registration_password_file }}"
+      register: mother_ticker_wazuh_pass_file
+      no_log: true
+      when: mother_ticker_wazuh_registration_password | length == 0
+
+    - name: Settle the registration password
+      ansible.builtin.set_fact:
+        mother_ticker_wazuh_pass: >-
+          {{ mother_ticker_wazuh_registration_password
+             if mother_ticker_wazuh_registration_password | length > 0
+             else (mother_ticker_wazuh_pass_file.content | b64decode | trim) }}
+      no_log: true
+
+    - name: gnupg, to read the repository key before apt does
+      ansible.builtin.apt:
+        name: gnupg
+        state: present
+      when: not mother_ticker_offline | bool
+
+    - name: Fetch the Wazuh repository signing key
+      ansible.builtin.get_url:
+        url: "{{ mother_ticker_wazuh_key_url }}"
+        dest: /usr/share/keyrings/wazuh.gpg.asc
+        mode: "0644"
+      when: not mother_ticker_offline | bool
+
+    - name: Read the key's fingerprint
+      ansible.builtin.command:
+        argv:
+          - gpg
+          - --batch
+          - --with-colons
+          - --import-options
+          - show-only
+          - --import
+          - /usr/share/keyrings/wazuh.gpg.asc
+      register: mother_ticker_wazuh_key
+      changed_when: false
+
+    - name: Refuse a key that is not Wazuh's
+      ansible.builtin.assert:
+        that: >-
+          (mother_ticker_wazuh_key.stdout_lines | select('match', '^fpr:') | first | default(''))
+          == 'fpr:::::::::' ~ mother_ticker_wazuh_key_fingerprint ~ ':'
+        fail_msg: >-
+          The key at {{ mother_ticker_wazuh_key_url }} is not the one this role pins
+          ({{ mother_ticker_wazuh_key_fingerprint }}). Nothing was added to apt. Confirm the
+          fingerprint against Wazuh's documentation before changing
+          mother_ticker_wazuh_key_fingerprint.
+
+    - name: Install the key where apt can use it
+      ansible.builtin.command:
+        argv:
+          - gpg
+          - --batch
+          - --yes
+          - --dearmor
+          - -o
+          - /usr/share/keyrings/wazuh.gpg
+          - /usr/share/keyrings/wazuh.gpg.asc
+        creates: /usr/share/keyrings/wazuh.gpg
+
+    - name: Add the Wazuh apt repository
+      ansible.builtin.apt_repository:
+        repo: "deb [signed-by=/usr/share/keyrings/wazuh.gpg] {{ mother_ticker_wazuh_repo_url }} stable main"
+        filename: wazuh
+        state: present
+        update_cache: true
+      when: not mother_ticker_offline | bool
+
+    - name: Release the version hold before apt looks at the agent
+      ansible.builtin.dpkg_selections:
+        name: wazuh-agent
+        selection: install
+
+    - name: Install the Wazuh agent, enrolling it with the manager on first install
+      ansible.builtin.apt:
+        name: "wazuh-agent={{ mother_ticker_wazuh_version }}-1"
+        state: present
+        allow_downgrade: true
+      environment:
+        WAZUH_MANAGER: "{{ mother_ticker_wazuh_manager }}"
+        WAZUH_AGENT_NAME: "{{ mother_ticker_wazuh_agent_name }}"
+        WAZUH_AGENT_GROUP: "{{ mother_ticker_wazuh_agent_group }}"
+        WAZUH_REGISTRATION_PASSWORD: "{{ mother_ticker_wazuh_pass }}"
+      no_log: true
+      when: not mother_ticker_offline | bool
+
+    - name: Hold the agent at that version
+      ansible.builtin.dpkg_selections:
+        name: wazuh-agent
+        selection: hold
+
+    - name: Run the Wazuh agent
+      ansible.builtin.systemd:
+        name: wazuh-agent.service
+        enabled: true
+        state: started
+        daemon_reload: true
