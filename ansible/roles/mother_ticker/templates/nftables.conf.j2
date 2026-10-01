@@ -9,6 +9,7 @@
 {% set scrape4 = mother_ticker_metrics_allow | reject('search', ':') | list %}
 {% set scrape6 = mother_ticker_metrics_allow | select('search', ':') | list %}
 {% set metrics_on = mother_ticker_metrics_mode == 'prometheus' and mother_ticker_metrics_allow | length > 0 %}
+{% set node_on = mother_ticker_node_exporter | bool and mother_ticker_metrics_allow | length > 0 %}
 
 flush ruleset
 
@@ -49,6 +50,12 @@ table inet mother_ticker {
 {% endif %}
 {% if metrics_on and scrape6 %}
         ip6 saddr { {{ scrape6 | join(', ') }} } tcp dport {{ mother_ticker_metrics_port }} accept
+{% endif %}
+{% if node_on and scrape4 %}
+        ip saddr { {{ scrape4 | join(', ') }} } tcp dport {{ mother_ticker_node_exporter_port }} accept
+{% endif %}
+{% if node_on and scrape6 %}
+        ip6 saddr { {{ scrape6 | join(', ') }} } tcp dport {{ mother_ticker_node_exporter_port }} accept
 {% endif %}
 
         limit rate 5/minute log prefix "mother-ticker drop: " counter

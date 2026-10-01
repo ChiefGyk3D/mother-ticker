@@ -34,6 +34,11 @@ usage: mother-ticker-install [options]
   --orphan-stratum N       --overlay auto|yes|no     --nts yes|no
   --hardware-present yes|no   no = bench without the HAT: skip PPS/RTC/UART checks, no reboots
   --display-rotate 0|90|180|270   console rotation on the DSI panel, degrees clockwise
+  --node-exporter yes|no   Debian's Prometheus node exporter on 9100, for the scrapers only
+  --wazuh-manager HOST     Wazuh agent, enrolled with this manager (needs --wazuh-version)
+  --wazuh-version X.Y.Z    agent version to install and hold; never above the manager's
+  --wazuh-password-file F  registration password file on this unit (mode 0600, root)
+  --wazuh-group G          agent group on the manager (optional)
   --nmea-offset SECONDS    --offline yes|no          --wheelhouse DIR
   --alert-webhook-url URL  --alert-format json|ntfy  --alert-ntfy-topic T  --alert-token-file F
   --alert-min-level warning|critical
@@ -54,6 +59,7 @@ ADMIN_USER='' HOSTNAME_SET='' NTP_ALLOW='' MGMT_ALLOW='' METRICS_ALLOW='' METRIC
 UPSTREAM_NTP='' RELAY_HOST='' RELAY_PORT='' RELAY_TRANSPORT='' RELAY_FRAMING='' ORPHAN_STRATUM=''
 NMEA_OFFSET='' WHEELHOUSE='' EXTRA_VARS_FILE='' REPO_DIR='' DISPLAY_ROTATE=''
 ALERT_WEBHOOK_URL='' ALERT_FORMAT='' ALERT_NTFY_TOPIC='' ALERT_TOKEN_FILE='' ALERT_MIN_LEVEL=''
+NODE_EXPORTER='' WAZUH_MANAGER='' WAZUH_VERSION='' WAZUH_PASSWORD_FILE='' WAZUH_GROUP=''
 
 load_conf() {
     # Only plain KEY=VALUE lines with a known key are honoured; nothing is executed.
@@ -97,6 +103,11 @@ load_conf() {
             ALERT_NTFY_TOPIC) ALERT_NTFY_TOPIC=$val ;;
             ALERT_TOKEN_FILE) ALERT_TOKEN_FILE=$val ;;
             ALERT_MIN_LEVEL) ALERT_MIN_LEVEL=$val ;;
+            NODE_EXPORTER) NODE_EXPORTER=$val ;;
+            WAZUH_MANAGER) WAZUH_MANAGER=$val ;;
+            WAZUH_VERSION) WAZUH_VERSION=$val ;;
+            WAZUH_PASSWORD_FILE) WAZUH_PASSWORD_FILE=$val ;;
+            WAZUH_GROUP) WAZUH_GROUP=$val ;;
             *) echo "mother-ticker-install: ignoring unknown key $key in $file" >&2 ;;
         esac
     done < "$file"
@@ -143,6 +154,11 @@ while [[ $# -gt 0 ]]; do
         --alert-ntfy-topic) ALERT_NTFY_TOPIC=$2; shift ;;
         --alert-token-file) ALERT_TOKEN_FILE=$2; shift ;;
         --alert-min-level) ALERT_MIN_LEVEL=$2; shift ;;
+        --node-exporter) NODE_EXPORTER=$2; shift ;;
+        --wazuh-manager) WAZUH_MANAGER=$2; shift ;;
+        --wazuh-version) WAZUH_VERSION=$2; shift ;;
+        --wazuh-password-file) WAZUH_PASSWORD_FILE=$2; shift ;;
+        --wazuh-group) WAZUH_GROUP=$2; shift ;;
         --tags) tags=$2; shift ;;
         --check) check=1 ;;
         --inventory-only) inventory_only=$2; shift ;;
@@ -166,6 +182,11 @@ if [[ -n $RELAY_FRAMING ]]; then case $RELAY_FRAMING in newline|octet-counted) ;
 if [[ -n $ALERT_FORMAT ]]; then case $ALERT_FORMAT in json|ntfy) ;; *) die "ALERT_FORMAT must be json or ntfy" ;; esac; fi
 if [[ -n $ALERT_MIN_LEVEL ]]; then case $ALERT_MIN_LEVEL in warning|critical) ;; *) die "ALERT_MIN_LEVEL must be warning or critical" ;; esac; fi
 if [[ -n $EXTRA_VARS_FILE && ! -r $EXTRA_VARS_FILE ]]; then die "EXTRA_VARS_FILE $EXTRA_VARS_FILE is not readable"; fi
+if [[ -n $NODE_EXPORTER ]]; then case $NODE_EXPORTER in yes|no) ;; *) die "NODE_EXPORTER must be yes or no" ;; esac; fi
+if [[ -n $WAZUH_MANAGER ]]; then
+    [[ $WAZUH_VERSION =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || die "WAZUH_VERSION must be the agent version to hold, e.g. 4.9.2, no newer than the manager (got '$WAZUH_VERSION')"
+    [[ -n $WAZUH_PASSWORD_FILE ]] || die "WAZUH_PASSWORD_FILE is required with WAZUH_MANAGER (the registration password, mode 0600, root)"
+fi
 if [[ $SITE == malware-net && $UPSTREAM_SET -eq 0 ]]; then UPSTREAM_NTP=; UPSTREAM_SET=1; fi
 
 hostname_value=${HOSTNAME_SET:-$(hostname)}
@@ -218,6 +239,12 @@ write_inventory() {
         [[ -n $ALERT_NTFY_TOPIC ]] && echo "      mother_ticker_alert_ntfy_topic: \"$ALERT_NTFY_TOPIC\""
         [[ -n $ALERT_TOKEN_FILE ]] && echo "      mother_ticker_alert_token_file: \"$ALERT_TOKEN_FILE\""
         [[ -n $ALERT_MIN_LEVEL ]] && echo "      mother_ticker_alert_min_level: $ALERT_MIN_LEVEL"
+        [[ $NODE_EXPORTER == yes ]] && echo "      mother_ticker_node_exporter: true"
+        [[ $NODE_EXPORTER == no ]] && echo "      mother_ticker_node_exporter: false"
+        [[ -n $WAZUH_MANAGER ]] && echo "      mother_ticker_wazuh_manager: \"$WAZUH_MANAGER\""
+        [[ -n $WAZUH_MANAGER ]] && echo "      mother_ticker_wazuh_version: \"$WAZUH_VERSION\""
+        [[ -n $WAZUH_MANAGER ]] && echo "      mother_ticker_wazuh_registration_password_file: \"$WAZUH_PASSWORD_FILE\""
+        [[ -n $WAZUH_MANAGER && -n $WAZUH_GROUP ]] && echo "      mother_ticker_wazuh_agent_group: \"$WAZUH_GROUP\""
         true
     } > "$dir/hosts.yml"
 }
@@ -281,6 +308,11 @@ if [[ $conf_file != "$CONF_DEFAULT" ]]; then
         echo "ALERT_NTFY_TOPIC=$ALERT_NTFY_TOPIC"
         echo "ALERT_TOKEN_FILE=$ALERT_TOKEN_FILE"
         echo "ALERT_MIN_LEVEL=$ALERT_MIN_LEVEL"
+        echo "NODE_EXPORTER=$NODE_EXPORTER"
+        echo "WAZUH_MANAGER=$WAZUH_MANAGER"
+        echo "WAZUH_VERSION=$WAZUH_VERSION"
+        echo "WAZUH_PASSWORD_FILE=$WAZUH_PASSWORD_FILE"
+        echo "WAZUH_GROUP=$WAZUH_GROUP"
         echo "WHEELHOUSE=$WHEELHOUSE"
         echo "EXTRA_VARS_FILE=$EXTRA_VARS_FILE"
         echo "REPO_DIR=$REPO_DIR"

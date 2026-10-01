@@ -90,6 +90,56 @@ class TestExampleConfig:
         assert result.returncode == 0, result.stderr
         assert load(tmp_path)["mother_ticker_display_rotate"] == 180
 
+    def test_agents_are_off_unless_named(self, tmp_path: Path) -> None:
+        result = run("--config", str(EXAMPLE), out=tmp_path)
+        assert result.returncode == 0, result.stderr
+        hv = load(tmp_path)
+        assert hv.get("mother_ticker_node_exporter") is not True
+        assert "mother_ticker_wazuh_manager" not in hv
+
+    def test_wazuh_flags(self, tmp_path: Path) -> None:
+        enrol_file = "/etc/mother-ticker/wazuh.pass"
+        result = run(
+            "--config",
+            str(EXAMPLE),
+            "--node-exporter",
+            "yes",
+            "--wazuh-manager",
+            "198.51.100.20",
+            "--wazuh-version",
+            "4.9.2",
+            "--wazuh-password-file",
+            enrol_file,
+            "--wazuh-group",
+            "ntp",
+            out=tmp_path,
+        )
+        assert result.returncode == 0, result.stderr
+        hv = load(tmp_path)
+        assert hv["mother_ticker_node_exporter"] is True
+        assert hv["mother_ticker_wazuh_manager"] == "198.51.100.20"
+        assert hv["mother_ticker_wazuh_version"] == "4.9.2", "a string, never a float"
+        assert hv["mother_ticker_wazuh_registration_password_file"] == enrol_file
+        assert hv["mother_ticker_wazuh_agent_group"] == "ntp"
+
+    def test_wazuh_manager_needs_a_version_and_a_password_file(self, tmp_path: Path) -> None:
+        result = run("--config", str(EXAMPLE), "--wazuh-manager", "198.51.100.20", out=tmp_path)
+        assert result.returncode == 1
+        assert "WAZUH_VERSION must be" in result.stderr
+        result = run(
+            "--config",
+            str(EXAMPLE),
+            "--wazuh-manager",
+            "198.51.100.20",
+            "--wazuh-version",
+            "4.9.2",
+            "--wazuh-password-file",
+            "",
+            out=tmp_path,
+        )
+        assert result.returncode == 1
+        assert "WAZUH_PASSWORD_FILE is required" in result.stderr
+
     def test_malware_net_without_explicit_upstream_gets_none(self, tmp_path: Path) -> None:
         """A minimal malware-net config must not inherit public servers from the default."""
         conf = tmp_path / "c.conf"
@@ -108,6 +158,7 @@ class TestValidation:
             ("--relay-transport", "pigeon", "RELAY_TRANSPORT must be"),
             ("--relay-framing", "smoke", "RELAY_FRAMING must be"),
             ("--display-rotate", "45", "DISPLAY_ROTATE must be"),
+            ("--node-exporter", "maybe", "NODE_EXPORTER must be"),
         ],
     )
     def test_bad_values_fail_early(

@@ -47,6 +47,11 @@
   when: item != 'mother-ticker-console.service' or mother_ticker_console_tui | bool
   failed_when: false
 
+- name: Restart node exporter
+  ansible.builtin.systemd:
+    name: prometheus-node-exporter
+    state: restarted
+
 - name: Reload udev
   ansible.builtin.command: udevadm control --reload
   changed_when: true

@@ -175,6 +175,18 @@ SCENARIOS = [
             "mother_ticker_disable_touchscreen": False,
         },
     ),
+    Scenario(
+        "node exporter and wazuh",
+        {
+            "mother_ticker_site": "main-lan",
+            "mother_ticker_metrics_allow": ["192.0.2.10/32", "2001:db8:2::10/128"],
+            "mother_ticker_node_exporter": True,
+            "mother_ticker_wazuh_manager": "198.51.100.20",
+            "mother_ticker_wazuh_version": "4.9.2",
+            "mother_ticker_wazuh_registration_password_file": "/etc/mother-ticker/wazuh.pass",
+            "mother_ticker_wazuh_agent_group": "ntp",
+        },
+    ),
 ]
 
 TEMPLATE_NAMES = sorted(p.name for p in TEMPLATES.glob("*.j2"))
@@ -291,6 +303,7 @@ class TestNftables:
                 str(v["mother_ticker_nts_port"]): v["mother_ticker_ntp_allow"],
                 "22": v["mother_ticker_mgmt_allow"],
                 str(v["mother_ticker_metrics_port"]): v["mother_ticker_metrics_allow"],
+                str(v["mother_ticker_node_exporter_port"]): v["mother_ticker_metrics_allow"],
             }[port]
             for src in sources.split(", "):
                 assert src in listed, f"{src} is not in the role's list for port {port}"
@@ -304,6 +317,64 @@ class TestNftables:
             v["mother_ticker_metrics_allow"]
         )
         assert (port in text) == expect_open
+
+    def test_node_exporter_port_open_only_when_installed(self, scenario: Scenario) -> None:
+        v = scenario.vars
+        text = render("nftables.conf.j2", v)
+        port = f"dport {v['mother_ticker_node_exporter_port']} accept"
+        expect_open = bool(v["mother_ticker_node_exporter"]) and bool(
+            v["mother_ticker_metrics_allow"]
+        )
+        assert (port in text) == expect_open
+        if expect_open:
+            assert text.count(port) == len({":" in s for s in v["mother_ticker_metrics_allow"]}), (
+                "one accept per address family that has a scraper"
+            )
+
+
+class TestIntegrations:
+    """The optional agents: off by default, and the Wazuh key pinned before apt sees it."""
+
+    TASKS = ROLE / "tasks" / "integrations.yml"
+
+    def test_off_by_default(self) -> None:
+        v = effective_vars({})
+        assert v["mother_ticker_node_exporter"] is False
+        assert v["mother_ticker_wazuh_manager"] == ""
+
+    def test_wazuh_key_is_pinned_by_full_fingerprint(self) -> None:
+        v = effective_vars({})
+        fpr = v["mother_ticker_wazuh_key_fingerprint"]
+        assert re.fullmatch(r"[0-9A-F]{40}", fpr), "a full v4 fingerprint, upper-case hex"
+        assert fpr.endswith("29111145"), "the key id Wazuh's own Puppet module checks for"
+        assert v["mother_ticker_wazuh_key_url"].startswith("https://")
+        assert v["mother_ticker_wazuh_repo_url"].startswith("https://")
+
+    def test_repository_is_added_only_after_the_key_check(self) -> None:
+        tasks = yaml.safe_load(self.TASKS.read_text())
+        wazuh = next(t for t in tasks if t.get("name") == "Wazuh agent")["block"]
+        names = [t["name"] for t in wazuh]
+        assert names.index("Refuse a key that is not Wazuh's") < names.index(
+            "Add the Wazuh apt repository"
+        )
+        repo = next(t for t in wazuh if t["name"] == "Add the Wazuh apt repository")
+        assert (
+            "signed-by=/usr/share/keyrings/wazuh.gpg"
+            in repo["ansible.builtin.apt_repository"]["repo"]
+        )
+        install = next(t for t in wazuh if t["name"].startswith("Install the Wazuh agent"))
+        assert install["no_log"] is True, "the registration password is in that task's environment"
+        assert "WAZUH_REGISTRATION_PASSWORD" in install["environment"]
+        hold = next(t for t in wazuh if t["name"] == "Hold the agent at that version")
+        assert hold["ansible.builtin.dpkg_selections"]["selection"] == "hold"
+        assert names.index(hold["name"]) > names.index(install["name"])
+
+    def test_nothing_runs_for_a_unit_that_names_no_agent(self) -> None:
+        tasks = yaml.safe_load(self.TASKS.read_text())
+        for task in tasks:
+            when = task["when"]
+            conds = when if isinstance(when, list) else [when]
+            assert any("node_exporter" in c or "wazuh_manager" in c for c in conds), task["name"]
 
     def test_nts_port_follows_the_switch(self, scenario: Scenario) -> None:
         v = scenario.vars

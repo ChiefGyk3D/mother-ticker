@@ -258,6 +258,7 @@ Everything site-specific comes from the site flag or host_vars:
 | `allow` and nftables | main LAN subnets | malware net subnet |
 | Metrics | Prometheus `/metrics` on 9101, nftables-limited to the scraper | RFC 5424 syslog, JSON body, TCP or UDP, to the relay |
 | Root filesystem, apt timers, journal, shell escape | by `mode` (appliance on both by default) | by `mode` |
+| Optional agents (node exporter, Wazuh) | by host_vars; see [Optional agents](#optional-agents) | the same, if the segment can reach a scraper or a manager |
 
 Re-running against the isolated unit later needs maintenance mode first
 (overlay off); from the unit itself that is `sudo mother-ticker-install`, from
@@ -411,6 +412,24 @@ the unit already has:
 
 `docs/alerts.md` has the Grafana alert rules, the ntfy and n8n setups, email
 through either, and where Patch Gremlin fits.
+
+## Optional agents
+
+Two agents for your own monitoring, off unless named. Both make sense on the
+main-LAN unit; on the malware net only if a scraper or a manager is reachable
+from that segment, which is your call.
+
+| Agent | Switch | What the role does |
+|---|---|---|
+| Prometheus node exporter | `mother_ticker_node_exporter: true` / `NODE_EXPORTER=yes` | installs Debian's `prometheus-node-exporter`, binds it to `mother_ticker_node_exporter_port` (9100) and opens that port to `mother_ticker_metrics_allow` only, beside the unit's own exporter on 9101. `grafana/README.md` has the scrape job. |
+| Wazuh agent | `mother_ticker_wazuh_manager` / `WAZUH_MANAGER` | adds Wazuh's apt repository with its signing key fetched and checked against the fingerprint pinned in the role before apt sees it; installs `wazuh-agent` at `mother_ticker_wazuh_version` (`WAZUH_VERSION`) and holds it there, because Wazuh supports an agent only when the manager is at least as new; enrolls it with the registration password read from `mother_ticker_wazuh_registration_password_file` on the unit (mode 0600, root) or `mother_ticker_wazuh_registration_password` from a vault; optional `mother_ticker_wazuh_agent_group`. |
+
+Enrollment happens during the deploy, before the overlay goes on, so the
+agent's `client.keys` lives on the real root; the verify step fails if it is
+empty. On a running appliance, re-running `-t integrations,verify` needs
+maintenance mode first. The agent is not removed when you clear the manager;
+`apt purge wazuh-agent` does that. Neither agent is on the TUI's system
+screen; the manager and Prometheus are where you watch them.
 
 ## Updates
 

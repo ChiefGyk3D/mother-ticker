@@ -93,6 +93,34 @@ mother_ticker_syslog_framing: newline
 mother_ticker_syslog_facility: 16
 mother_ticker_syslog_interval_s: 15
 
+# Optional agents for your own monitoring. Nothing below runs unless named,
+# and both belong on a unit that can reach a scraper or a manager, which on
+# the malware net is your decision, not the role's.
+#
+# Prometheus node exporter: Debian's package, answering the scrapers in
+# mother_ticker_metrics_allow only (nftables), beside the unit's own exporter.
+mother_ticker_node_exporter: false
+mother_ticker_node_exporter_port: 9100
+#
+# Wazuh agent: the manager's address switches it on. The agent must not be
+# newer than the manager (Wazuh's compatibility rule), so the version is
+# named here and held in dpkg; raise it when the manager is upgraded. The
+# repository's signing key is fetched and its fingerprint checked against the
+# value below before apt sees it (Wazuh.com Signing Key <support@wazuh.com>,
+# key id 29111145, the id Wazuh's own Puppet module checks for). Enrollment
+# needs the registration password: a file on the unit (mode 0600, root), or
+# the inline value from a vault. The deploy enrolls the agent before the
+# overlay goes on, so client.keys lands on the real root.
+mother_ticker_wazuh_manager: ""            # IP or FQDN; empty = no agent
+mother_ticker_wazuh_version: ""            # e.g. "4.9.2", never above the manager
+mother_ticker_wazuh_registration_password_file: ""   # e.g. /etc/mother-ticker/wazuh.pass
+mother_ticker_wazuh_registration_password: ""        # inline alternative (vault)
+mother_ticker_wazuh_agent_name: "{{ mother_ticker_hostname }}"
+mother_ticker_wazuh_agent_group: ""        # existing group on the manager, or empty
+mother_ticker_wazuh_repo_url: https://packages.wazuh.com/4.x/apt/
+mother_ticker_wazuh_key_url: https://packages.wazuh.com/key/GPG-KEY-WAZUH
+mother_ticker_wazuh_key_fingerprint: 0DCFCA5547B19D2A6099506096B3EE5F29111145
+
 # Health-check ladder.
 mother_ticker_health_restart_after: 4      # consecutive 30 s ticks
 mother_ticker_health_reboot_after: 40

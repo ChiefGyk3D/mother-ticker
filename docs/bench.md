@@ -103,6 +103,12 @@ Malware-net site: on the relay host, `nc -l -p 514` (TCP) or `nc -u -l -p
 `"health_level":2` in the body and severity 2 in the priority. Record which
 transport and framing your relay wanted.
 
+Optional agents, if you enabled them: `curl -s http://unit:9100/metrics |
+grep node_boot_time_seconds` from a scraper address and a timeout from any
+other; the unit appears in the Wazuh manager under its hostname, and
+`sudo cat /var/ossec/etc/client.keys` on the unit has one line. Record the
+agent version that your manager accepted.
+
 ### Updates
 
 ```sh
