@@ -6,9 +6,10 @@ dtoverlay=disable-bt
 {% endif %}
 # Kernel PPS from the HAT's timepulse pin.
 dtoverlay=pps-gpio,gpiopin={{ mother_ticker_pps_gpio }}
-# RV-3028-C7 real-time clock on I2C.
+# RV-3028-C7 real-time clock on I2C. backup-switchover-mode lets it run from
+# the board's backup supply when the Pi is off; the driver stores it in EEPROM.
 dtparam=i2c_arm=on
-dtoverlay={{ mother_ticker_rtc_overlay }}
+dtoverlay={{ mother_ticker_rtc_overlay }},backup-switchover-mode={{ mother_ticker_rtc_backup_switchover | int }}
 {% if mother_ticker_hw_watchdog %}
 # BCM2711 hardware watchdog, petted by systemd.
 dtparam=watchdog=on

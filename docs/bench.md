@@ -175,7 +175,18 @@ re-run `-t boot`, reboot, and put the working number in your report.
 sudo hwclock -r                             # a plausible time, not 1970
 timedatectl                                 # "RTC time" agrees with "Universal time" to the second
 dpkg -l fake-hwclock                        # purged
+sudo hwclock --param-get=backup_switch_mode # 0x1: direct switching, the RTC runs from the backup supply
 ```
+
+The last line is the one that matters. The RV-3028 ships with switchover
+disabled, so without `backup-switchover-mode=1` in the overlay line the RTC
+stops the moment the Pi loses power and every cold boot starts from whenever
+it was last written. The kernel driver stores the mode in the chip's EEPROM
+at probe, so a unit that has booted once with the role's config keeps it. If
+it reads 0x0, check that the config.txt block carries the parameter and that
+`dmesg | grep rv3028` shows no EEPROM error; Uputronics publish a
+`configure-rv3028.sh` for kernels whose driver could not write it, which the
+6.12 kernel on trixie can.
 
 Pull the power for a minute and boot with the network cable out. The clock
 must come up within a second or two of real time from the RTC alone.
