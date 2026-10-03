@@ -1,0 +1,36 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Copyright (C) 2026 Renegade Penguin LLC
+#
+# CodeQL (Python and the workflows), gitleaks, Semgrep, dependency review and
+# OpenSSF Scorecard. The jobs live in ChiefGyk3D/git-your-ship-together. No
+# Doppler: nothing here needs a secret.
+---
+# yamllint disable rule:line-length
+name: Security
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: '0 6 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  security:
+    uses: ChiefGyk3D/git-your-ship-together/.github/workflows/security.yml@0e58a0e61ea8b3800d1cb0e6ed81bb860ace2094 # v1.6.3
+    permissions:
+      contents: read
+      security-events: write
+      pull-requests: write
+      id-token: write # Scorecard publishing
+    with:
+      codeql-queries: security-extended,security-and-quality
+      # No requirements file: the one runtime dependency is tracked by
+      # Dependabot and dependency review.
+      pip-audit-requirements: ""
+      scorecard: true
+      egress-policy: block
