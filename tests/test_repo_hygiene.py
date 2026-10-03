@@ -170,12 +170,16 @@ class TestWorkflows:
             + "\n".join(offenders)
         )
 
-    def test_every_ci_job_feeds_all_green(self) -> None:
+    def test_every_ci_job_uses_shared_workflow(self) -> None:
+        # CI lives in the shared git-your-ship-together workflows; each of their
+        # reusable calls feeds the shared "CI green" gate, so ci.yml itself must
+        # not define hand-written jobs.
         wf = yaml.safe_load((ROOT / ".github/workflows/ci.yml").read_text(encoding="utf-8"))
         jobs = wf["jobs"]
-        assert "all-green" in jobs, "ci.yml needs an all-green job for branch protection"
-        needs = set(jobs["all-green"]["needs"])
-        others = set(jobs) - {"all-green"}
-        assert needs == others, (
-            f"all-green must need every job; missing {others - needs}, extra {needs - others}"
-        )
+        assert jobs, "ci.yml defines no jobs"
+        local = [
+            name
+            for name, job in jobs.items()
+            if not str(job.get("uses", "")).startswith("ChiefGyk3D/git-your-ship-together/")
+        ]
+        assert not local, f"jobs not calling the shared workflows: {local}"

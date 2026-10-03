@@ -150,6 +150,7 @@ class AlertSender:
         try:
             return Path(self.config.token_file).read_text(encoding="utf-8").strip() or None
         except OSError as exc:
+            # nosemgrep: python.lang.security.audit.logging.logger-credential-leak.python-logger-credential-disclosure  # path only
             log.warning("cannot read webhook token %s: %s", self.config.token_file, exc)
             return None
 
