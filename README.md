@@ -440,6 +440,18 @@ screen; the manager and Prometheus are where you watch them.
   bundle built on the main-LAN unit with `scripts/stage-offline-bundle.sh`,
   then maintenance mode off and reboot.
 
+## Continuous integration
+
+CI, the security scans and the release are called from
+[git-your-ship-together](https://github.com/ChiefGyk3D/git-your-ship-together)'s
+reusable workflows, pinned by commit. Branch protection on `main` requires
+these checks:
+
+- `ci / CI green` (ruff, mypy, bandit, pytest on 3.11 to 3.13, the CLI smoke test, workflow lint)
+- `shell / CI green` (shellcheck, shfmt, yamllint, ansible-lint, the playbook syntax check)
+- the `security / ...` jobs (CodeQL, gitleaks, Semgrep, dependency review), once
+  their names show in a first run's check list
+
 ## Documentation map
 
 | Document | Read it for |

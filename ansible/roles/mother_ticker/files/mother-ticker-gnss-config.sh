@@ -16,8 +16,14 @@ WAIT_S="${UBX_WAIT_S:-60}"
 
 log() { printf 'mother-ticker-gnss-config: %s\n' "$*"; }
 
-command -v ubxtool >/dev/null 2>&1 || { log "ubxtool not found"; exit 1; }
-command -v gpspipe >/dev/null 2>&1 || { log "gpspipe not found"; exit 1; }
+command -v ubxtool >/dev/null 2>&1 || {
+    log "ubxtool not found"
+    exit 1
+}
+command -v gpspipe >/dev/null 2>&1 || {
+    log "gpspipe not found"
+    exit 1
+}
 
 # Wait for gpsd to answer and to have a device.
 i=0

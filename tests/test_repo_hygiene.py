@@ -170,12 +170,16 @@ class TestWorkflows:
             + "\n".join(offenders)
         )
 
-    def test_every_ci_job_feeds_all_green(self) -> None:
+    def test_ci_calls_gyst_gates(self) -> None:
+        """Branch protection watches `ci / CI green` and `shell / CI green`.
+
+        Those gate jobs live in the reusable workflows; this holds the two
+        caller jobs under the names the README's required-checks list gives.
+        """
         wf = yaml.safe_load((ROOT / ".github/workflows/ci.yml").read_text(encoding="utf-8"))
         jobs = wf["jobs"]
-        assert "all-green" in jobs, "ci.yml needs an all-green job for branch protection"
-        needs = set(jobs["all-green"]["needs"])
-        others = set(jobs) - {"all-green"}
-        assert needs == others, (
-            f"all-green must need every job; missing {others - needs}, extra {needs - others}"
-        )
+        assert set(jobs) == {"ci", "shell"}, f"unexpected caller jobs: {set(jobs)}"
+        for name, job in jobs.items():
+            assert job["uses"].startswith("ChiefGyk3D/git-your-ship-together/.github/workflows/"), (
+                f"{name} must call a GYST reusable workflow"
+            )

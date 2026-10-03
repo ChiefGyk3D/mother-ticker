@@ -51,7 +51,10 @@ usage: mother-ticker-install [options]
 USAGE
 }
 
-die() { echo "mother-ticker-install: $*" >&2; exit 1; }
+die() {
+    echo "mother-ticker-install: $*" >&2
+    exit 1
+}
 
 # Defaults (the role's defaults win for anything left empty).
 SITE=main-lan MODE=appliance OVERLAY=auto NTS=no OFFLINE=no UPSTREAM_SET=0 HARDWARE_PRESENT=yes
@@ -72,8 +75,10 @@ load_conf() {
         key=${BASH_REMATCH[1]}
         val=${BASH_REMATCH[2]}
         val=${val%"${val##*[![:space:]]}"}
-        val=${val#\"}; val=${val%\"}
-        val=${val#\'}; val=${val%\'}
+        val=${val#\"}
+        val=${val%\"}
+        val=${val#\'}
+        val=${val%\'}
         case $key in
             SITE) SITE=$val ;;
             MODE) MODE=$val ;;
@@ -85,7 +90,10 @@ load_conf() {
             MGMT_ALLOW) MGMT_ALLOW=$val ;;
             METRICS_ALLOW) METRICS_ALLOW=$val ;;
             METRICS_PORT) METRICS_PORT=$val ;;
-            UPSTREAM_NTP) UPSTREAM_NTP=$val; UPSTREAM_SET=1 ;;
+            UPSTREAM_NTP)
+                UPSTREAM_NTP=$val
+                UPSTREAM_SET=1
+                ;;
             RELAY_HOST) RELAY_HOST=$val ;;
             RELAY_PORT) RELAY_PORT=$val ;;
             RELAY_TRANSPORT) RELAY_TRANSPORT=$val ;;
@@ -110,7 +118,7 @@ load_conf() {
             WAZUH_GROUP) WAZUH_GROUP=$val ;;
             *) echo "mother-ticker-install: ignoring unknown key $key in $file" >&2 ;;
         esac
-    done < "$file"
+    done <"$file"
 }
 
 conf_file=
@@ -126,68 +134,183 @@ if [[ -z $conf_file && -r $CONF_DEFAULT ]]; then conf_file=$CONF_DEFAULT; fi
 while [[ $# -gt 0 ]]; do
     case $1 in
         --config) shift ;;
-        --site) SITE=$2; shift ;;
-        --mode) MODE=$2; shift ;;
-        --hardware-present) HARDWARE_PRESENT=$2; shift ;;
-        --display-rotate) DISPLAY_ROTATE=$2; shift ;;
-        --hostname) HOSTNAME_SET=$2; shift ;;
-        --admin-user) ADMIN_USER=$2; shift ;;
-        --ntp-allow) NTP_ALLOW=$2; shift ;;
-        --mgmt-allow) MGMT_ALLOW=$2; shift ;;
-        --metrics-allow) METRICS_ALLOW=$2; shift ;;
-        --metrics-port) METRICS_PORT=$2; shift ;;
-        --upstream) UPSTREAM_NTP=$2; UPSTREAM_SET=1; shift ;;
-        --relay-host) RELAY_HOST=$2; shift ;;
-        --relay-port) RELAY_PORT=$2; shift ;;
-        --relay-transport) RELAY_TRANSPORT=$2; shift ;;
-        --relay-framing) RELAY_FRAMING=$2; shift ;;
-        --orphan-stratum) ORPHAN_STRATUM=$2; shift ;;
-        --overlay) OVERLAY=$2; shift ;;
-        --nts) NTS=$2; shift ;;
-        --nmea-offset) NMEA_OFFSET=$2; shift ;;
-        --offline) OFFLINE=$2; shift ;;
-        --wheelhouse) WHEELHOUSE=$2; shift ;;
-        --extra-vars-file) EXTRA_VARS_FILE=$2; shift ;;
-        --repo) REPO_DIR=$2; shift ;;
-        --alert-webhook-url) ALERT_WEBHOOK_URL=$2; shift ;;
-        --alert-format) ALERT_FORMAT=$2; shift ;;
-        --alert-ntfy-topic) ALERT_NTFY_TOPIC=$2; shift ;;
-        --alert-token-file) ALERT_TOKEN_FILE=$2; shift ;;
-        --alert-min-level) ALERT_MIN_LEVEL=$2; shift ;;
-        --node-exporter) NODE_EXPORTER=$2; shift ;;
-        --wazuh-manager) WAZUH_MANAGER=$2; shift ;;
-        --wazuh-version) WAZUH_VERSION=$2; shift ;;
-        --wazuh-password-file) WAZUH_PASSWORD_FILE=$2; shift ;;
-        --wazuh-group) WAZUH_GROUP=$2; shift ;;
-        --tags) tags=$2; shift ;;
+        --site)
+            SITE=$2
+            shift
+            ;;
+        --mode)
+            MODE=$2
+            shift
+            ;;
+        --hardware-present)
+            HARDWARE_PRESENT=$2
+            shift
+            ;;
+        --display-rotate)
+            DISPLAY_ROTATE=$2
+            shift
+            ;;
+        --hostname)
+            HOSTNAME_SET=$2
+            shift
+            ;;
+        --admin-user)
+            ADMIN_USER=$2
+            shift
+            ;;
+        --ntp-allow)
+            NTP_ALLOW=$2
+            shift
+            ;;
+        --mgmt-allow)
+            MGMT_ALLOW=$2
+            shift
+            ;;
+        --metrics-allow)
+            METRICS_ALLOW=$2
+            shift
+            ;;
+        --metrics-port)
+            METRICS_PORT=$2
+            shift
+            ;;
+        --upstream)
+            UPSTREAM_NTP=$2
+            UPSTREAM_SET=1
+            shift
+            ;;
+        --relay-host)
+            RELAY_HOST=$2
+            shift
+            ;;
+        --relay-port)
+            RELAY_PORT=$2
+            shift
+            ;;
+        --relay-transport)
+            RELAY_TRANSPORT=$2
+            shift
+            ;;
+        --relay-framing)
+            RELAY_FRAMING=$2
+            shift
+            ;;
+        --orphan-stratum)
+            ORPHAN_STRATUM=$2
+            shift
+            ;;
+        --overlay)
+            OVERLAY=$2
+            shift
+            ;;
+        --nts)
+            NTS=$2
+            shift
+            ;;
+        --nmea-offset)
+            NMEA_OFFSET=$2
+            shift
+            ;;
+        --offline)
+            OFFLINE=$2
+            shift
+            ;;
+        --wheelhouse)
+            WHEELHOUSE=$2
+            shift
+            ;;
+        --extra-vars-file)
+            EXTRA_VARS_FILE=$2
+            shift
+            ;;
+        --repo)
+            REPO_DIR=$2
+            shift
+            ;;
+        --alert-webhook-url)
+            ALERT_WEBHOOK_URL=$2
+            shift
+            ;;
+        --alert-format)
+            ALERT_FORMAT=$2
+            shift
+            ;;
+        --alert-ntfy-topic)
+            ALERT_NTFY_TOPIC=$2
+            shift
+            ;;
+        --alert-token-file)
+            ALERT_TOKEN_FILE=$2
+            shift
+            ;;
+        --alert-min-level)
+            ALERT_MIN_LEVEL=$2
+            shift
+            ;;
+        --node-exporter)
+            NODE_EXPORTER=$2
+            shift
+            ;;
+        --wazuh-manager)
+            WAZUH_MANAGER=$2
+            shift
+            ;;
+        --wazuh-version)
+            WAZUH_VERSION=$2
+            shift
+            ;;
+        --wazuh-password-file)
+            WAZUH_PASSWORD_FILE=$2
+            shift
+            ;;
+        --wazuh-group)
+            WAZUH_GROUP=$2
+            shift
+            ;;
+        --tags)
+            tags=$2
+            shift
+            ;;
         --check) check=1 ;;
-        --inventory-only) inventory_only=$2; shift ;;
-        -h|--help) usage; exit 0 ;;
-        *) usage >&2; die "unknown option $1" ;;
+        --inventory-only)
+            inventory_only=$2
+            shift
+            ;;
+        -h | --help)
+            usage
+            exit 0
+            ;;
+        *)
+            usage >&2
+            die "unknown option $1"
+            ;;
     esac
     shift
 done
 
 # Validate the few things that would otherwise fail late and confusingly.
-case $SITE in main-lan|malware-net) ;; *) die "SITE must be main-lan or malware-net (got '$SITE')" ;; esac
-case $MODE in appliance|dev) ;; *) die "MODE must be appliance or dev (got '$MODE')" ;; esac
-case $OVERLAY in auto|yes|no) ;; *) die "OVERLAY must be auto, yes or no" ;; esac
-case $HARDWARE_PRESENT in yes|no) ;; *) die "HARDWARE_PRESENT must be yes or no" ;; esac
-if [[ -n $DISPLAY_ROTATE ]]; then case $DISPLAY_ROTATE in 0|90|180|270) ;; *) die "DISPLAY_ROTATE must be 0, 90, 180 or 270 (got '$DISPLAY_ROTATE')" ;; esac; fi
-case $NTS in yes|no) ;; *) die "NTS must be yes or no" ;; esac
-case $OFFLINE in yes|no) ;; *) die "OFFLINE must be yes or no" ;; esac
+case $SITE in main-lan | malware-net) ;; *) die "SITE must be main-lan or malware-net (got '$SITE')" ;; esac
+case $MODE in appliance | dev) ;; *) die "MODE must be appliance or dev (got '$MODE')" ;; esac
+case $OVERLAY in auto | yes | no) ;; *) die "OVERLAY must be auto, yes or no" ;; esac
+case $HARDWARE_PRESENT in yes | no) ;; *) die "HARDWARE_PRESENT must be yes or no" ;; esac
+if [[ -n $DISPLAY_ROTATE ]]; then case $DISPLAY_ROTATE in 0 | 90 | 180 | 270) ;; *) die "DISPLAY_ROTATE must be 0, 90, 180 or 270 (got '$DISPLAY_ROTATE')" ;; esac fi
+case $NTS in yes | no) ;; *) die "NTS must be yes or no" ;; esac
+case $OFFLINE in yes | no) ;; *) die "OFFLINE must be yes or no" ;; esac
 [[ -n $ADMIN_USER ]] || die "ADMIN_USER is required (the account Raspberry Pi Imager created)"
-if [[ -n $RELAY_TRANSPORT ]]; then case $RELAY_TRANSPORT in tcp|udp) ;; *) die "RELAY_TRANSPORT must be tcp or udp" ;; esac; fi
-if [[ -n $RELAY_FRAMING ]]; then case $RELAY_FRAMING in newline|octet-counted) ;; *) die "RELAY_FRAMING must be newline or octet-counted" ;; esac; fi
-if [[ -n $ALERT_FORMAT ]]; then case $ALERT_FORMAT in json|ntfy) ;; *) die "ALERT_FORMAT must be json or ntfy" ;; esac; fi
-if [[ -n $ALERT_MIN_LEVEL ]]; then case $ALERT_MIN_LEVEL in warning|critical) ;; *) die "ALERT_MIN_LEVEL must be warning or critical" ;; esac; fi
+if [[ -n $RELAY_TRANSPORT ]]; then case $RELAY_TRANSPORT in tcp | udp) ;; *) die "RELAY_TRANSPORT must be tcp or udp" ;; esac fi
+if [[ -n $RELAY_FRAMING ]]; then case $RELAY_FRAMING in newline | octet-counted) ;; *) die "RELAY_FRAMING must be newline or octet-counted" ;; esac fi
+if [[ -n $ALERT_FORMAT ]]; then case $ALERT_FORMAT in json | ntfy) ;; *) die "ALERT_FORMAT must be json or ntfy" ;; esac fi
+if [[ -n $ALERT_MIN_LEVEL ]]; then case $ALERT_MIN_LEVEL in warning | critical) ;; *) die "ALERT_MIN_LEVEL must be warning or critical" ;; esac fi
 if [[ -n $EXTRA_VARS_FILE && ! -r $EXTRA_VARS_FILE ]]; then die "EXTRA_VARS_FILE $EXTRA_VARS_FILE is not readable"; fi
-if [[ -n $NODE_EXPORTER ]]; then case $NODE_EXPORTER in yes|no) ;; *) die "NODE_EXPORTER must be yes or no" ;; esac; fi
+if [[ -n $NODE_EXPORTER ]]; then case $NODE_EXPORTER in yes | no) ;; *) die "NODE_EXPORTER must be yes or no" ;; esac fi
 if [[ -n $WAZUH_MANAGER ]]; then
     [[ $WAZUH_VERSION =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || die "WAZUH_VERSION must be the agent version to hold, e.g. 4.9.2, no newer than the manager (got '$WAZUH_VERSION')"
     [[ -n $WAZUH_PASSWORD_FILE ]] || die "WAZUH_PASSWORD_FILE is required with WAZUH_MANAGER (the registration password, mode 0600, root)"
 fi
-if [[ $SITE == malware-net && $UPSTREAM_SET -eq 0 ]]; then UPSTREAM_NTP=; UPSTREAM_SET=1; fi
+if [[ $SITE == malware-net && $UPSTREAM_SET -eq 0 ]]; then
+    UPSTREAM_NTP=
+    UPSTREAM_SET=1
+fi
 
 hostname_value=${HOSTNAME_SET:-$(hostname)}
 
@@ -196,7 +319,8 @@ yaml_list() {
     local out="[" first=1 item
     for item in $1; do
         if [[ $first -eq 0 ]]; then out+=", "; fi
-        out+="\"$item\""; first=0
+        out+="\"$item\""
+        first=0
     done
     printf '%s]' "$out"
 }
@@ -246,7 +370,7 @@ write_inventory() {
         [[ -n $WAZUH_MANAGER ]] && echo "      mother_ticker_wazuh_registration_password_file: \"$WAZUH_PASSWORD_FILE\""
         [[ -n $WAZUH_MANAGER && -n $WAZUH_GROUP ]] && echo "      mother_ticker_wazuh_agent_group: \"$WAZUH_GROUP\""
         true
-    } > "$dir/hosts.yml"
+    } >"$dir/hosts.yml"
 }
 
 if [[ -n $inventory_only ]]; then
@@ -260,12 +384,13 @@ fi
 # Locate the checkout: the one this script lives in, else the copy the role keeps.
 script_dir=$(cd "$(dirname "$(readlink -f "$0")")" && pwd)
 if [[ -z $REPO_DIR ]]; then
-    if [[ -f $script_dir/../ansible/site.yml ]]; then REPO_DIR=$(cd "$script_dir/.." && pwd)
-    elif [[ -f $REPO_FALLBACK/ansible/site.yml ]]; then REPO_DIR=$REPO_FALLBACK
+    if [[ -f $script_dir/../ansible/site.yml ]]; then
+        REPO_DIR=$(cd "$script_dir/.." && pwd)
+    elif [[ -f $REPO_FALLBACK/ansible/site.yml ]]; then
+        REPO_DIR=$REPO_FALLBACK
     fi
 fi
 [[ -f $REPO_DIR/ansible/site.yml ]] || die "no checkout found; pass --repo DIR (a clone of the repository)"
-
 
 if ! command -v ansible-playbook >/dev/null 2>&1; then
     if [[ $OFFLINE == yes ]]; then
@@ -316,7 +441,7 @@ if [[ $conf_file != "$CONF_DEFAULT" ]]; then
         echo "WHEELHOUSE=$WHEELHOUSE"
         echo "EXTRA_VARS_FILE=$EXTRA_VARS_FILE"
         echo "REPO_DIR=$REPO_DIR"
-    } > "$CONF_DEFAULT"
+    } >"$CONF_DEFAULT"
     chmod 0644 "$CONF_DEFAULT"
 fi
 

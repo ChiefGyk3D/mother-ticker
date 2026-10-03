@@ -16,7 +16,10 @@
 #   /opt/mother-ticker/venv/bin/pip install --no-index --find-links bundle/wheelhouse --upgrade /opt/mother-ticker/repo
 set -euo pipefail
 
-[[ $EUID -eq 0 ]] || { echo "run as root (apt needs it)" >&2; exit 1; }
+[[ $EUID -eq 0 ]] || {
+    echo "run as root (apt needs it)" >&2
+    exit 1
+}
 out=${1:-./offline-bundle}
 stamp=$(date -u +%Y%m%d)
 work=$(mktemp -d)
@@ -47,7 +50,7 @@ fi
 mkdir -p "$out"
 bundle="$out/mother-ticker-offline-$stamp.tar"
 tar -C "$work" -cf "$bundle" .
-sha256sum "$bundle" > "$bundle.sha256"
+sha256sum "$bundle" >"$bundle.sha256"
 echo
 echo "bundle: $bundle"
 echo "sha256: $(cut -d' ' -f1 "$bundle.sha256")"

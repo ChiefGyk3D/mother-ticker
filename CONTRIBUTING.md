@@ -100,8 +100,9 @@ full checklist, including what can be tested before the board is fitted.
 - Update the docs that describe what you changed: README for anything an
   operator sees, RUNBOOK for a new failure mode, ARCHITECTURE for a design
   change.
-- CI must be green. The `all green` job is what branch protection watches;
-  a new job must be added to its `needs` list or the hygiene test fails.
+- CI must be green. `ci / CI green` and `shell / CI green` are what branch protection
+  watches; they come from the reusable workflows, so a new check is a new input there,
+  not a new job here (see `.github/workflows/ci.yml`).
 - Commit messages: imperative subject under 72 characters, a body that says
   why.
 
@@ -157,6 +158,7 @@ one; neither is refused because there is nothing to release. Between
 releases, every PR adds its line under Unreleased; that is all "keeping
 going" takes.
 
-Action pins in the workflows are commit SHAs with the version in a comment.
+Reusable-workflow and action pins are commit SHAs with the version in a comment;
+Dependabot moves them.
 Resolve a new pin with `git ls-remote --tags https://github.com/<owner>/<repo>`;
 never from memory.

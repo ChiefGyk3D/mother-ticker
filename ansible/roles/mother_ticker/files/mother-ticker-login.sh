@@ -12,7 +12,7 @@ export MOTHER_TICKER_CONFIG="${MOTHER_TICKER_CONFIG:-/etc/mother-ticker/config.t
 if [ "${1:-}" = "-c" ]; then
     # Non-interactive: sshd passes the remote command as $2.
     case "${2:-}" in
-        status|metrics|"mother-ticker status"|"mother-ticker metrics")
+        status | metrics | "mother-ticker status" | "mother-ticker metrics")
             sub=${2#mother-ticker }
             exec "$MT" "$sub"
             ;;

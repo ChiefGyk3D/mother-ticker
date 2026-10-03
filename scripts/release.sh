@@ -10,10 +10,16 @@
 #   scripts/release.sh 0.2.0
 set -euo pipefail
 
-usage() { echo "usage: $0 X.Y.Z" >&2; exit 64; }
+usage() {
+    echo "usage: $0 X.Y.Z" >&2
+    exit 64
+}
 [[ $# -eq 1 ]] || usage
 version=$1
-[[ $version =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "not a SemVer version: $version" >&2; exit 64; }
+[[ $version =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || {
+    echo "not a SemVer version: $version" >&2
+    exit 64
+}
 
 root=$(git rev-parse --show-toplevel)
 cd "$root"
@@ -38,8 +44,10 @@ fi
 
 # Four cases. A section for the version may already exist (the first release,
 # written by hand) and Unreleased may or may not hold entries.
-section_exists=0; grep -q "^## \[$version\]" CHANGELOG.md && section_exists=1
-unreleased_has_entries=0; python3 scripts/changelog_section.py --check Unreleased >/dev/null 2>&1 && unreleased_has_entries=1
+section_exists=0
+grep -q "^## \[$version\]" CHANGELOG.md && section_exists=1
+unreleased_has_entries=0
+python3 scripts/changelog_section.py --check Unreleased >/dev/null 2>&1 && unreleased_has_entries=1
 roll=0
 if [[ $section_exists -eq 1 && $unreleased_has_entries -eq 1 ]]; then
     echo "CHANGELOG.md has both a [$version] section and Unreleased entries; fold them into one by hand, or pick the next version" >&2
