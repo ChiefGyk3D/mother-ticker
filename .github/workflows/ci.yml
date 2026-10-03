@@ -25,6 +25,9 @@ jobs:
       DOPPLER_TOKEN: ${{ secrets.DOPPLER_TOKEN }}   # optional Service Token fallback; unset means OIDC only
     with:
       python-versions: '["3.11", "3.12", "3.13"]'
+      runners: '["ubuntu-24.04", "ubuntu-24.04-arm"]'
+      distros: '["debian:12", "debian:13", "ubuntu:24.04"]'
+      distro-runners: '["ubuntu-24.04", "ubuntu-24.04-arm"]'
       install-command: |
         python -m pip install --upgrade pip
         pip install -e ".[dev]"
@@ -32,9 +35,10 @@ jobs:
       lint-install-command: |
         pip install -e ".[dev]"
       lint-command: |
-        ruff check .
-        ruff format --check . || echo "::warning title=ruff format::formatting drift (advisory)"
+        ruff check src tests scripts
+        ruff format --check src tests scripts
         mypy
+        bandit -c pyproject.toml -r src -q
       smoke-command: mother-ticker --help
       docker-build: false
       egress-policy: block
@@ -50,7 +54,8 @@ jobs:
       shfmt-args: -i 4 -ci
       config-lint-install-command: pip install yamllint "ansible-core>=2.16" ansible-lint
       config-lint-command: |
-        yamllint .
-        cd ansible && ansible-lint
+        yamllint -c .yamllint.yml .
+        (cd ansible && ansible-lint)
+        (cd ansible && ansible-playbook -i inventory/example site.yml --syntax-check)
       workflow-lint: false   # the ci job above already lints the workflow files
       egress-policy: block
