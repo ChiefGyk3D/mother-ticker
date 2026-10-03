@@ -7,7 +7,7 @@ follows [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 ### Changed
 
-- CI, the security scans and the release now call ChiefGyk3D/git-your-ship-together's reusable workflows (v1.6.3). Gates are `ci / CI green` and `shell / CI green`; the local `all-green` job is gone. Added CodeQL, Semgrep, dependency review, Scorecard, shfmt, and build provenance with SHA256SUMS on release assets.
+- CI, the security scans and the release now call ChiefGyk3D/git-your-ship-together's reusable workflows (v1.7.1). Gates are `ci / CI green` and `shell / CI green`; the local `all-green` job is gone. Added CodeQL, Semgrep, dependency review, Scorecard, shfmt, and build provenance with SHA256SUMS on release assets.
 
 ### Added
 

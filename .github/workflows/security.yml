@@ -2,8 +2,7 @@
 # Copyright (C) 2026 Renegade Penguin LLC
 #
 # CodeQL (Python and the workflows), gitleaks, Semgrep, dependency review and
-# OpenSSF Scorecard. The jobs live in ChiefGyk3D/git-your-ship-together. No
-# Doppler: nothing here needs a secret.
+# OpenSSF Scorecard. The jobs live in ChiefGyk3D/git-your-ship-together.
 ---
 # yamllint disable rule:line-length
 name: Security
@@ -21,12 +20,14 @@ permissions:
 
 jobs:
   security:
-    uses: ChiefGyk3D/git-your-ship-together/.github/workflows/security.yml@0e58a0e61ea8b3800d1cb0e6ed81bb860ace2094 # v1.6.3
+    uses: ChiefGyk3D/git-your-ship-together/.github/workflows/security.yml@8d6d940f143b97b6d521f5dfe38b11573a916ef4 # v1.7.1
     permissions:
       contents: read
       security-events: write
       pull-requests: write
-      id-token: write # Scorecard publishing
+      id-token: write # Scorecard publishing, and Doppler OIDC
+    secrets:
+      DOPPLER_TOKEN: ${{ secrets.DOPPLER_TOKEN }}   # optional Service Token fallback; unset means OIDC only
     with:
       codeql-queries: security-extended,security-and-quality
       # No requirements file: the one runtime dependency is tracked by
@@ -34,3 +35,6 @@ jobs:
       pip-audit-requirements: ""
       scorecard: true
       egress-policy: block
+      doppler-project: ci
+      doppler-config: ci
+      doppler-identity-id: ${{ vars.DOPPLER_IDENTITY_ID }}
