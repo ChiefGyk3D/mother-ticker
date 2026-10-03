@@ -7,7 +7,10 @@
 # Add --no-reboot to skip the reboot (Ansible does this and reboots itself).
 set -eu
 
-usage() { echo "usage: $0 on|off|status [--no-reboot]" >&2; exit 64; }
+usage() {
+    echo "usage: $0 on|off|status [--no-reboot]" >&2
+    exit 64
+}
 
 [ "$#" -ge 1 ] || usage
 action=$1
@@ -21,7 +24,10 @@ for arg in "$@"; do
 done
 
 RC=/usr/bin/raspi-config
-[ -x "$RC" ] || { echo "raspi-config not found; overlay management needs Raspberry Pi OS" >&2; exit 1; }
+[ -x "$RC" ] || {
+    echo "raspi-config not found; overlay management needs Raspberry Pi OS" >&2
+    exit 1
+}
 
 configured() {
     # 0 when the next boot uses the overlay
