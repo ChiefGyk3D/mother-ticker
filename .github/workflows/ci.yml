@@ -31,10 +31,7 @@ jobs:
       install-command: |
         python -m pip install --upgrade pip
         pip install -e ".[dev]"
-      # tests/test_repo_hygiene.py::test_every_ci_job_feeds_all_green asserts the old hand-written
-      # ci.yml (an all-green job); the shared workflow's "CI green" gate replaces it. Deselected
-      # until that test is updated for the new layout.
-      test-command: pytest --deselect tests/test_repo_hygiene.py::TestWorkflows::test_every_ci_job_feeds_all_green
+      test-command: pytest
       lint-install-command: |
         pip install -e ".[dev]"
       lint-command: |
