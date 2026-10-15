@@ -18,8 +18,10 @@ fi
 if [[ ! -x .venv/bin/ansible-playbook ]]; then
     echo "==> creating .venv with Ansible"
     python3 -m venv .venv
-    .venv/bin/pip install --quiet --upgrade pip
-    .venv/bin/pip install --quiet "ansible-core>=2.16" ansible-lint
+    # Every package, direct and transitive, is pinned with hashes in
+    # ansible/requirements.txt (generated from requirements.in); pip refuses
+    # anything that does not match.
+    .venv/bin/pip install --quiet --require-hashes -r ansible/requirements.txt
 fi
 
 if [[ ! -d ansible/inventory/local ]]; then

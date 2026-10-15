@@ -13,6 +13,18 @@ updates:
       python-dependencies:
         patterns: ['*']
 
+  # Hashed lock for the deploy controller venv (scripts/setup-controller.sh)
+  - package-ecosystem: pip
+    directory: /ansible
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    open-pull-requests-limit: 5
+    groups:
+      controller-dependencies:
+        patterns: ['*']
+
   - package-ecosystem: github-actions
     directory: /
     schedule:

@@ -26,6 +26,9 @@ jobs:
     with:
       pip-audit-requirements: ""   # no requirements.txt; add a hash-pinned lock and name it here
       scorecard: true
+      # The Ansible controller tooling is GPL-3.0. It is run by scripts/setup-controller.sh, never linked into or
+      # shipped with mother-ticker, so the licence rule does not apply to it. Advisories still fail the review.
+      dependency-review-allow-dependencies-licenses: pkg:pypi/ansible-core, pkg:pypi/ansible-lint
       egress-policy: block
       doppler-project: ci
       doppler-config: ci
