@@ -4,5 +4,5 @@
 #
 #   python3 -m venv /tmp/uv && /tmp/uv/bin/pip install uv
 #   /tmp/uv/bin/uv pip compile ansible/requirements.in --universal --generate-hashes --python-version 3.11 -o ansible/requirements.txt
-ansible-core>=2.16
+ansible-core>=2.22.0
 ansible-lint
